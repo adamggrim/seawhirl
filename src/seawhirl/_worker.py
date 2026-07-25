@@ -29,7 +29,6 @@ def run_spinner(
 ):
     num_frames = len(frames)
     current_frame = float(random.randint(0, num_frames - 1))
-    current_frame = float(random.randint(0, num_frames - 1))
     last_rendered_idx = -1
     last_rendered_len = 0
     start_time = last_update_time = time.time()
@@ -57,7 +56,9 @@ def run_spinner(
                     backspaces = '\b' * last_rendered_len
                     padding_spaces = ' ' * max(0, last_rendered_len - len(char))
                     back_padding = '\b' * len(padding_spaces)
-                    sys.stdout.write(f'{backspaces}{char}{padding_spaces}{back_padding}')
+                    sys.stdout.write(
+                        f'{backspaces}{char}{padding_spaces}{back_padding}'
+                    )
 
                 sys.stdout.flush()
                 last_rendered_idx = current_frame_idx
