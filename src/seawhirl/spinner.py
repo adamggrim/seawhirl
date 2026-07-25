@@ -11,7 +11,8 @@ class Spinner:
         initial_fps: float = 6.0,
         peak_animation_fps: float = 120.0,
         max_render_fps: float = 60.0,
-        frames: list[str] | None = None
+        frames: list[str] | None = None,
+        stream: Any | None = None
     ) -> None:
         self.accel_secs = accel_secs
         self.initial_fps = initial_fps
@@ -20,27 +21,28 @@ class Spinner:
         self.frames = frames or [
             '⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'
         ]
+        self.stream = stream or sys.stdout
 
-        is_tty = hasattr(sys.stdout, 'isatty') and sys.stdout.isatty()
-        is_utf8 = getattr(sys.stdout, 'encoding', '').lower() in (
-            'utf-8', 'utf8'
-        )
+        is_tty = hasattr(self.stream, 'isatty') and self.stream.isatty()
+        is_utf8 = getattr(
+            self.stream, 'encoding', ''
+        ).lower() in ('utf-8', 'utf8')
         self._disabled = not (is_tty and is_utf8)
         self._process: subprocess.Popen | None = None
 
     def _show_cursor(self) -> None:
         if not self._disabled:
             try:
-                sys.stdout.write('\033[?25h')
-                sys.stdout.flush()
+                self.stream.write('\033[?25h')
+                self.stream.flush()
             except (OSError, ValueError):
                 pass
 
     def _hide_cursor(self) -> None:
         if not self._disabled:
             try:
-                sys.stdout.write('\033[?25l')
-                sys.stdout.flush()
+                self.stream.write('\033[?25l')
+                self.stream.flush()
             except (OSError, ValueError):
                 pass
 
@@ -60,7 +62,7 @@ class Spinner:
                 '--delay', str(self.loop_delay),
                 '--frames', ','.join(self.frames)
             ],
-            stdout=sys.stdout,
+            stdout=self.stream,
             stderr=subprocess.DEVNULL
         )
 
