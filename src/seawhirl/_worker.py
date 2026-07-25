@@ -1,8 +1,9 @@
+import argparse
+import json
 import math
 import random
 import sys
 import time
-import argparse
 
 
 def _calculate_current_fps(
@@ -78,5 +79,5 @@ if __name__ == '__main__':
     parser.add_argument('--frames', type=str, required=True)
     args = parser.parse_args()
 
-    frames_list = args.frames.split(',')
+    frames_list = json.loads(args.frames)
     run_spinner(args.accel, args.initial, args.peak, args.delay, frames_list)

@@ -2,6 +2,8 @@ import subprocess
 import sys
 from typing import Callable, Any
 
+from .utils import is_supported_terminal
+
 __all__ = ['Spinner', 'run_with_spinner']
 
 class Spinner:
@@ -60,7 +62,7 @@ class Spinner:
                 '--initial', str(self.initial_fps),
                 '--peak', str(self.peak_animation_fps),
                 '--delay', str(self.loop_delay),
-                '--frames', ','.join(self.frames)
+                '--frames', json.dumps(self.frames)
             ],
             stdout=self.stream,
             stderr=subprocess.DEVNULL
