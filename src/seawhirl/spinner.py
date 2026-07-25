@@ -25,11 +25,7 @@ class Spinner:
         ]
         self.stream = stream or sys.stdout
 
-        is_tty = hasattr(self.stream, 'isatty') and self.stream.isatty()
-        is_utf8 = getattr(
-            self.stream, 'encoding', ''
-        ).lower() in ('utf-8', 'utf8')
-        self._disabled = not (is_tty and is_utf8)
+        self._disabled = not is_supported_terminal(self.stream)
         self._process: subprocess.Popen | None = None
 
     def _show_cursor(self) -> None:
