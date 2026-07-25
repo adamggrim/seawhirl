@@ -4,16 +4,17 @@ import sys
 import time
 import argparse
 
-_SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
-_NUM_FRAMES = len(_SPINNER_FRAMES)
 
 def run_spinner(
     accel_secs: float,
     initial_fps: float,
     peak_fps: float,
-    loop_delay: float
+    loop_delay: float,
+    frames: list[str]
 ):
-    current_frame = float(random.randint(0, _NUM_FRAMES - 1))
+    num_frames = len(frames)
+    current_frame = float(random.randint(0, num_frames - 1))
+    current_frame = float(random.randint(0, num_frames - 1))
     last_rendered_idx = -1
     last_rendered_len = 0
     start_time = last_update_time = time.time()
@@ -35,10 +36,10 @@ def run_spinner(
                 current_fps = peak_fps
 
             current_frame += current_fps * elapsed_since_last
-            current_frame_idx = int(current_frame) % _NUM_FRAMES
+            current_frame_idx = int(current_frame) % num_frames
 
             if current_frame_idx != last_rendered_idx:
-                char = _SPINNER_FRAMES[current_frame_idx]
+                char = frames[current_frame_idx]
 
                 if last_rendered_idx == -1:
                     sys.stdout.write(char)
@@ -65,6 +66,8 @@ if __name__ == '__main__':
     parser.add_argument('--initial', type=float, required=True)
     parser.add_argument('--peak', type=float, required=True)
     parser.add_argument('--delay', type=float, required=True)
+    parser.add_argument('--frames', type=str, required=True)
     args = parser.parse_args()
 
-    run_spinner(args.accel, args.initial, args.peak, args.delay)
+    frames_list = args.frames.split(',')
+    run_spinner(args.accel, args.initial, args.peak, args.delay, frames_list)

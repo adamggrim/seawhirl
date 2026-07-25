@@ -10,15 +10,21 @@ class Spinner:
         accel_secs: float = 3.0,
         initial_fps: float = 6.0,
         peak_animation_fps: float = 120.0,
-        max_render_fps: float = 60.0
+        max_render_fps: float = 60.0,
+        frames: list[str] | None = None
     ) -> None:
         self.accel_secs = accel_secs
         self.initial_fps = initial_fps
         self.peak_animation_fps = peak_animation_fps
         self.loop_delay = 1.0 / max_render_fps
+        self.frames = frames or [
+            '⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'
+        ]
 
         is_tty = hasattr(sys.stdout, 'isatty') and sys.stdout.isatty()
-        is_utf8 = getattr(sys.stdout, 'encoding', '').lower() in ('utf-8', 'utf8')
+        is_utf8 = getattr(sys.stdout, 'encoding', '').lower() in (
+            'utf-8', 'utf8'
+        )
         self._disabled = not (is_tty and is_utf8)
         self._process: subprocess.Popen | None = None
 
@@ -51,7 +57,8 @@ class Spinner:
                 '--accel', str(self.accel_secs),
                 '--initial', str(self.initial_fps),
                 '--peak', str(self.peak_animation_fps),
-                '--delay', str(self.loop_delay)
+                '--delay', str(self.loop_delay),
+                '--frames', ','.join(self.frames)
             ],
             stdout=sys.stdout,
             stderr=subprocess.DEVNULL
