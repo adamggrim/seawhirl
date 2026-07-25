@@ -5,6 +5,20 @@ import time
 import argparse
 
 
+def _calculate_current_fps(
+    elapsed_total: float,
+    accel_secs: float,
+    initial_fps: float,
+    peak_fps: float
+) -> float:
+    if elapsed_total >= accel_secs:
+        return peak_fps
+
+    progress = elapsed_total / accel_secs
+    log_progress = math.log10(1 + 9 * progress)
+    return initial_fps + (peak_fps - initial_fps) * log_progress
+
+
 def run_spinner(
     accel_secs: float,
     initial_fps: float,
@@ -26,14 +40,9 @@ def run_spinner(
             elapsed_since_last = now - last_update_time
             last_update_time = now
 
-            if elapsed_total < accel_secs:
-                progress = elapsed_total / accel_secs
-                log_progress = math.log10(1 + 9 * progress)
-                current_fps = (
-                    initial_fps + (peak_fps - initial_fps) * log_progress
-                )
-            else:
-                current_fps = peak_fps
+            current_fps = _calculate_current_fps(
+                elapsed_total, accel_secs, initial_fps, peak_fps
+            )
 
             current_frame += current_fps * elapsed_since_last
             current_frame_idx = int(current_frame) % num_frames
