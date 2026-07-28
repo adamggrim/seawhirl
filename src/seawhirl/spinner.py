@@ -5,7 +5,15 @@ from typing import Callable, Any
 
 from .utils import is_supported_terminal
 
-__all__ = ['Spinner', 'run_with_spinner']
+PRESETS: dict[str, list[str]] = {
+    'braille': ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'],
+    'dots': ['.  ', '.. ', '...', '   '],
+    'arc': ['◜', '◠', '◝', '◞', '◡', '◟'],
+    'bounce': ['⠁', '⠂', '⠄', '⠂']
+}
+
+__all__ = ['Spinner', 'run_with_spinner', 'PRESETS']
+
 
 class Spinner:
     def __init__(
@@ -14,17 +22,24 @@ class Spinner:
         initial_fps: float = 6.0,
         peak_animation_fps: float = 120.0,
         max_render_fps: float = 60.0,
-        frames: list[str] | None = None,
+        frames: list[str] | str | None = None,
         stream: Any | None = None
     ) -> None:
         self.accel_secs = accel_secs
         self.initial_fps = initial_fps
         self.peak_animation_fps = peak_animation_fps
         self.loop_delay = 1.0 / max_render_fps
-        self.frames = frames or [
-            '⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'
-        ]
         self.stream = stream or sys.stdout
+
+        if isinstance(frames, str):
+            if frames not in PRESETS:
+                raise ValueError(
+                    f"Unknown preset: '{frames}'. "
+                    f'Available presets: {list(PRESETS.keys())}'
+                )
+            self.frames = PRESETS[frames]
+        else:
+            self.frames = frames or PRESETS['braille']
 
         self._disabled = not is_supported_terminal(self.stream)
         self._process: subprocess.Popen | None = None
@@ -90,6 +105,7 @@ class Spinner:
     def run(self, func: Callable, *args: Any, **kwargs: Any) -> Any:
         with self:
             return func(*args, **kwargs)
+
 
 def run_with_spinner(func: Callable, *args: Any, **kwargs: Any) -> Any:
     spinner = Spinner()
