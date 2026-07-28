@@ -25,7 +25,8 @@ def run_spinner(
     initial_fps: float,
     peak_fps: float,
     loop_delay: float,
-    frames: list[str]
+    frames: list[str],
+    stop_event = None
 ):
     num_frames = len(frames)
     current_frame = float(random.randint(0, num_frames - 1))
@@ -34,7 +35,7 @@ def run_spinner(
     start_time = last_update_time = time.time()
 
     try:
-        while True:
+        while stop_event is None or not stop_event.is_set():
             now = time.time()
             elapsed_total = now - start_time
             elapsed_since_last = now - last_update_time
