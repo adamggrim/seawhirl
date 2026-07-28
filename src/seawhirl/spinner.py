@@ -20,7 +20,7 @@ class Spinner:
         self,
         accel_secs: float = 3.0,
         initial_fps: float = 6.0,
-        peak_animation_fps: float = 120.0,
+        peak_animation_fps: float = 60.0,
         max_render_fps: float = 60.0,
         frames: list[str] | str | None = None,
         stream: Any | None = None
