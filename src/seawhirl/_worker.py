@@ -72,6 +72,9 @@ def run_spinner(
             time.sleep(loop_delay)
     except KeyboardInterrupt:
         pass
+    except Exception as e:
+        sys.stderr.write(f'\nSpinner worker encountered an error: {e}\n')
+        sys.stderr.flush()
     finally:
         sys.stdout.write('\r\033[K')
         sys.stdout.flush()
