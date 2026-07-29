@@ -22,7 +22,7 @@ class Spinner:
         accel_secs: float = SpinnerDefaults.ACCEL_SECS,
         initial_fps: float = SpinnerDefaults.INITIAL_FPS,
         peak_animation_fps: float = SpinnerDefaults.PEAK_ANIMATION_FPS,
-        max_render_fps: float = SpinnerDefaults.MAX_RENDER_FPS,
+        peak_render_fps: float = SpinnerDefaults.MAX_RENDER_FPS,
         frames: list[str] | str | None = None,
         stream: Any | None = None,
         backend: Backend = Backend.SUBPROCESS
@@ -45,7 +45,7 @@ class Spinner:
 
         self.backend = backend
 
-        loop_delay = 1.0 / max_render_fps
+        loop_delay = 1.0 / peak_render_fps
         if self.backend == Backend.SUBPROCESS:
             self._worker = SubprocessBackend(
                 self.stream,

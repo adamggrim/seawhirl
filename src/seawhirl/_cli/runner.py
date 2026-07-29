@@ -53,7 +53,7 @@ def main() -> None:
         '--peak-fps',
         type=float,
         default=120.0,
-        help='Maximum frames per second (default: 120.0)',
+        help='Peak frames per second (default: 120.0)',
     )
 
     args = parser.parse_args()
