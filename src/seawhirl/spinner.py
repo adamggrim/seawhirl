@@ -1,5 +1,6 @@
 import sys
 from enum import Enum
+from functools import wraps
 from typing import Callable, Any
 
 from seawhirl.utils import is_supported_terminal
@@ -115,6 +116,7 @@ class Spinner:
         self.stop()
 
     def __call__(self, func: Callable) -> Callable:
+        @wraps(func)
         def wrapper(*args, **kwargs):
             with self:
                 return func(*args, **kwargs)
