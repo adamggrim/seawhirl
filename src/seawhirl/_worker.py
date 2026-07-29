@@ -3,6 +3,7 @@ import json
 import math
 import random
 import sys
+import threading
 import time
 
 
@@ -26,8 +27,8 @@ def run_spinner(
     peak_fps: float,
     loop_delay: float,
     frames: list[str],
-    stop_event = None
-):
+    stop_event: threading.Event | None = None
+) -> None:
     num_frames = len(frames)
     current_frame = float(random.randint(0, num_frames - 1))
     last_rendered_idx = -1
