@@ -116,7 +116,10 @@ class AsyncBackend(SpinnerBackend):
         self._async_task: asyncio.Task | None = None
 
     def start(self) -> None:
-        pass
+        raise RuntimeError(
+            "`AsyncBackend` cannot start synchronously. Please use 'aync with'"
+            'or decorate an async function.'
+        )
 
     def stop(self) -> None:
         pass
