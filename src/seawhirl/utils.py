@@ -1,4 +1,15 @@
+import platform
 from typing import Any
+
+
+def enable_windows_vt_processing() -> None:
+    if platform.system() == 'Windows':
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        handle = kernel32.GetStdHandle(-11)
+        mode = ctypes.c_uint32()
+        kernel32.GetConsoleMode(handle, ctypes.byref(mode))
+        kernel32.SetConsoleMode(handle, mode.value | 0x0004)
 
 
 def is_supported_terminal(stream: Any) -> bool:

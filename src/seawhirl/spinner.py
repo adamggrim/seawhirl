@@ -3,7 +3,7 @@ from enum import Enum
 from functools import wraps
 from typing import Callable, Any
 
-from seawhirl.utils import is_supported_terminal
+from seawhirl.utils import is_supported_terminal, enable_windows_vt_processing
 from seawhirl.constants import SpinnerDefaults, PRESETS
 from seawhirl._backends import SubprocessBackend, ThreadBackend, AsyncBackend
 
@@ -38,6 +38,9 @@ class Spinner:
             self.frames = frames or PRESETS[SpinnerDefaults.PRESET]
 
         self._disabled = not is_supported_terminal(self.stream)
+        if not self._disabled:
+            enable_windows_vt_processing()
+
         self.backend = backend
 
         loop_delay = 1.0 / max_render_fps
