@@ -6,6 +6,8 @@ import sys
 import threading
 import time
 
+from wcwidth import wcswidth
+
 
 def _calculate_current_fps(
     elapsed_total: float,
@@ -51,12 +53,13 @@ def run_spinner(
 
             if current_frame_idx != last_rendered_idx:
                 char = frames[current_frame_idx]
+                char_width = max(0, wcswidth(char))
 
                 if last_rendered_idx == -1:
                     sys.stdout.write(char)
                 else:
                     backspaces = '\b' * last_rendered_len
-                    padding_spaces = ' ' * max(0, last_rendered_len - len(char))
+                    padding_spaces = ' ' * max(0, last_rendered_len - char_width)
                     back_padding = '\b' * len(padding_spaces)
                     sys.stdout.write(
                         f'{backspaces}{char}{padding_spaces}{back_padding}'
@@ -64,7 +67,7 @@ def run_spinner(
 
                 sys.stdout.flush()
                 last_rendered_idx = current_frame_idx
-                last_rendered_len = len(char)
+                last_rendered_len = char_width
 
             time.sleep(loop_delay)
     except KeyboardInterrupt:
