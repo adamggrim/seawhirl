@@ -16,8 +16,11 @@ def main() -> None:
     parser.add_argument(
         '--mode',
         choices=list(PRESETS.keys()),
-        default='braille',
-        help='Select a built-in frame preset (default: braille)',
+        default='whirl',
+        help=(
+            "Select a built-in frame preset ('whirl', 'dots', 'line', 'arc' "
+            "or 'bounce')"
+        ),
     )
     parser.add_argument(
         '--custom',
