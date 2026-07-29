@@ -1,8 +1,10 @@
 import asyncio
 import json
+import random
 import subprocess
 import sys
 import threading
+import time
 from abc import ABC, abstractmethod
 from typing import Any
 
@@ -118,9 +120,6 @@ class AsyncBackend(SpinnerBackend):
         pass
 
     async def _async_render_loop(self) -> None:
-        import random
-        import time
-
         num_frames = len(self.frames)
         current_frame = float(random.randint(0, num_frames - 1))
         last_rendered_idx = -1
