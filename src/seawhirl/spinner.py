@@ -1,3 +1,5 @@
+import asyncio
+import inspect
 import sys
 from enum import Enum
 from functools import wraps
@@ -119,11 +121,18 @@ class Spinner:
         self.stop()
 
     def __call__(self, func: Callable) -> Callable:
+        if inspect.iscoroutinefunction(func):
+            @wraps(func)
+            async def async_wrapper(*args, **kwargs):
+                async with self:
+                    return await func(*args, **kwargs)
+            return async_wrapper
+
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def sync_wrapper(*args, **kwargs):
             with self:
                 return func(*args, **kwargs)
-        return wrapper
+        return sync_wrapper
 
     def run(self, func: Callable, *args: Any, **kwargs: Any) -> Any:
         with self:
