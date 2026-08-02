@@ -127,16 +127,16 @@ class AsyncBackend(SpinnerBackend):
     async def _async_render_loop(self) -> None:
         num_frames = len(self.frames)
         current_frame = float(random.randint(0, num_frames - 1))
-        last_rendered_idx = -1
-        last_rendered_len = 0
-        start_time = last_update_time = time.time()
+        prev_rendered_idx = -1
+        prev_rendered_len = 0
+        start_time = prev_update_time = time.time()
 
         try:
             while True:
                 now = time.time()
                 elapsed_total = now - start_time
-                elapsed_since_last = now - last_update_time
-                last_update_time = now
+                elapsed_since_last = now - prev_update_time
+                prev_update_time = now
 
                 current_fps = _calculate_current_fps(
                     elapsed_total,
@@ -148,16 +148,16 @@ class AsyncBackend(SpinnerBackend):
                 current_frame += current_fps * elapsed_since_last
                 current_frame_idx = int(current_frame) % num_frames
 
-                if current_frame_idx != last_rendered_idx:
+                if current_frame_idx != prev_rendered_idx:
                     char = self.frames[current_frame_idx]
                     char_width = max(0, wcswidth(char))
 
-                    if last_rendered_idx == -1:
+                    if prev_rendered_idx == -1:
                         self.stream.write(char)
                     else:
-                        backspaces = '\b' * last_rendered_len
+                        backspaces = '\b' * prev_rendered_len
                         padding_spaces = ' ' * max(
-                            0, last_rendered_len - char_width
+                            0, prev_rendered_len - char_width
                         )
                         back_padding = '\b' * len(padding_spaces)
                         self.stream.write(
@@ -165,8 +165,8 @@ class AsyncBackend(SpinnerBackend):
                         )
 
                     self.stream.flush()
-                    last_rendered_idx = current_frame_idx
-                    last_rendered_len = char_width
+                    prev_rendered_idx = current_frame_idx
+                    prev_rendered_len = char_width
 
                 await asyncio.sleep(self.loop_delay)
         except asyncio.CancelledError:
