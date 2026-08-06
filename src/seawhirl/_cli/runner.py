@@ -3,7 +3,7 @@ import sys
 import time
 
 from seawhirl.constants import PRESETS
-from seawhirl.spinner import Spinner
+from seawhirl.spinner import Spinner, Easing
 
 
 def main() -> None:
@@ -54,6 +54,15 @@ def main() -> None:
         type=float,
         default=120.0,
         help='Peak frames per second (default: 120.0)',
+    )
+    parser.add_argument(
+        '--easing',
+        choices=[e.value for e in Easing],
+        default='logarithmic',
+        help=(
+            'Physics easing curve '
+            "('logarithmic', 'sinusoidal', 'spring', 'inertial')"
+        ),
     )
 
     args = parser.parse_args()

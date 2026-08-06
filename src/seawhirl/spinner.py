@@ -8,11 +8,21 @@ from seawhirl.utils import is_supported_terminal, enable_windows_vt_processing
 from seawhirl.constants import SpinnerDefaults, PRESETS
 from seawhirl._backends import ThreadBackend, AsyncBackend
 
+
 class Backend(Enum):
     THREAD = 'thread'
     ASYNC = 'async'
 
-__all__ = ['Spinner', 'run_with_spinner', 'Backend']
+
+class Easing(Enum):
+    LOGARITHMIC = 'logarithmic'
+    SINUSOIDAL = 'sinusoidal'
+    SPRING = 'spring'
+    INERTIAL = 'inertial'
+
+
+__all__ = ['Spinner', 'run_with_spinner', 'Backend', 'Easing']
+
 
 class Spinner:
     def __init__(
@@ -23,7 +33,8 @@ class Spinner:
         peak_render_fps: float = SpinnerDefaults.MAX_RENDER_FPS,
         frames: list[str] | str | None = None,
         stream: Any | None = None,
-        backend: Backend = Backend.THREAD
+        backend: Backend = Backend.THREAD,
+        easing: Easing = Easing.LOGARITHMIC
     ) -> None:
         self.stream = stream or sys.stdout
 
@@ -51,7 +62,8 @@ class Spinner:
                 initial_fps,
                 peak_animation_fps,
                 loop_delay,
-                self.frames
+                self.frames,
+                easing.value
             )
         elif self.backend == Backend.ASYNC:
             self._worker = AsyncBackend(
@@ -60,7 +72,8 @@ class Spinner:
                 initial_fps,
                 peak_animation_fps,
                 loop_delay,
-                self.frames
+                self.frames,
+                easing.value
             )
 
     def _show_cursor(self) -> None:

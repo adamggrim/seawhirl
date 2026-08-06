@@ -20,7 +20,8 @@ class SpinnerBackend(ABC):
         initial_fps: float,
         peak_animation_fps: float,
         loop_delay: float,
-        frames: list[str]
+        frames: list[str],
+        easing: str
     ) -> None:
         self.stream = stream
         self.accel_secs = accel_secs
@@ -28,6 +29,7 @@ class SpinnerBackend(ABC):
         self.peak_animation_fps = peak_animation_fps
         self.loop_delay = loop_delay
         self.frames = frames
+        self.easing = easing
 
     @abstractmethod
     def start(self) -> None:
@@ -68,6 +70,7 @@ class ThreadBackend(SpinnerBackend):
                 self.peak_animation_fps,
                 self.loop_delay,
                 self.frames,
+                self.easing,
                 self._stop_event
             ),
             daemon=True
@@ -113,7 +116,8 @@ class AsyncBackend(SpinnerBackend):
                     elapsed_total,
                     self.accel_secs,
                     self.initial_fps,
-                    self.peak_animation_fps
+                    self.peak_animation_fps,
+                    self.easing
                 )
 
                 current_frame += current_fps * elapsed_since_last

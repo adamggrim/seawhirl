@@ -11,14 +11,24 @@ def _calculate_current_fps(
     elapsed_total: float,
     accel_secs: float,
     initial_fps: float,
-    peak_fps: float
+    peak_fps: float,
+    easing: str
 ) -> float:
     if elapsed_total >= accel_secs:
         return peak_fps
 
     progress = elapsed_total / accel_secs
-    log_progress = math.log10(1 + 9 * progress)
-    return initial_fps + (peak_fps - initial_fps) * log_progress
+
+    if easing == 'sinusoidal':
+        multiplier = 0.5 * (1 - math.cos(math.pi * progress))
+    elif easing == 'spring':
+        multiplier = 1 - math.exp(-5 * progress) * math.cos(10 * progress)
+    elif easing == 'inertial':
+        multiplier = math.pow(progress, 5)
+    else:
+        multiplier = math.log10(1 + 9 * progress)
+
+    return initial_fps + (peak_fps - initial_fps) * multiplier
 
 
 def run_spinner(
@@ -27,6 +37,7 @@ def run_spinner(
     peak_fps: float,
     loop_delay: float,
     frames: list[str],
+    easing: str,
     stop_event: threading.Event | None = None
 ) -> None:
     num_frames = len(frames)
@@ -43,7 +54,7 @@ def run_spinner(
             prev_update_time = now
 
             current_fps = _calculate_current_fps(
-                elapsed_total, accel_secs, initial_fps, peak_fps
+                elapsed_total, accel_secs, initial_fps, peak_fps, easing
             )
 
             current_frame += current_fps * elapsed_since_last
