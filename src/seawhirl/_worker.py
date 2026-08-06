@@ -1,4 +1,3 @@
-import math
 import random
 import sys
 import threading
@@ -6,27 +5,21 @@ import time
 
 from wcwidth import wcswidth
 
+from seawhirl.easing import EasingStrategy
+
 
 def _calculate_current_fps(
     elapsed_total: float,
     accel_secs: float,
     initial_fps: float,
     peak_fps: float,
-    easing: str
+    easing: EasingStrategy
 ) -> float:
     if elapsed_total >= accel_secs:
         return peak_fps
 
     progress = elapsed_total / accel_secs
-
-    if easing == 'sinusoidal':
-        multiplier = 0.5 * (1 - math.cos(math.pi * progress))
-    elif easing == 'spring':
-        multiplier = 1 - math.exp(-5 * progress) * math.cos(10 * progress)
-    elif easing == 'inertial':
-        multiplier = math.pow(progress, 5)
-    else:
-        multiplier = math.log10(1 + 9 * progress)
+    multiplier = easing.calculate_multiplier(progress)
 
     return initial_fps + (peak_fps - initial_fps) * multiplier
 
@@ -37,7 +30,7 @@ def run_spinner(
     peak_fps: float,
     loop_delay: float,
     frames: list[str],
-    easing: str,
+    easing: EasingStrategy,
     stop_event: threading.Event | None = None
 ) -> None:
     num_frames = len(frames)

@@ -7,6 +7,7 @@ from typing import Callable, Any
 from seawhirl.utils import is_supported_terminal, enable_windows_vt_processing
 from seawhirl.constants import SpinnerDefaults, PRESETS
 from seawhirl._backends import ThreadBackend, AsyncBackend
+from seawhirl.easing import EasingStrategy, Logarithmic
 
 
 class Backend(Enum):
@@ -14,14 +15,7 @@ class Backend(Enum):
     ASYNC = 'async'
 
 
-class Easing(Enum):
-    LOGARITHMIC = 'logarithmic'
-    SINUSOIDAL = 'sinusoidal'
-    SPRING = 'spring'
-    INERTIAL = 'inertial'
-
-
-__all__ = ['Spinner', 'run_with_spinner', 'Backend', 'Easing']
+__all__ = ['Spinner', 'run_with_spinner', 'Backend']
 
 
 class Spinner:
@@ -34,7 +28,7 @@ class Spinner:
         frames: list[str] | str | None = None,
         stream: Any | None = None,
         backend: Backend = Backend.THREAD,
-        easing: Easing = Easing.LOGARITHMIC
+        easing: EasingStrategy | None = None
     ) -> None:
         self.stream = stream or sys.stdout
 
@@ -53,8 +47,9 @@ class Spinner:
             enable_windows_vt_processing()
 
         self.backend = backend
-
+        self.easing = easing or Logarithmic()
         loop_delay = 1.0 / peak_render_fps
+
         if self.backend == Backend.THREAD:
             self._worker = ThreadBackend(
                 self.stream,
@@ -63,7 +58,7 @@ class Spinner:
                 peak_animation_fps,
                 loop_delay,
                 self.frames,
-                easing.value
+                self.easing
             )
         elif self.backend == Backend.ASYNC:
             self._worker = AsyncBackend(
@@ -73,7 +68,7 @@ class Spinner:
                 peak_animation_fps,
                 loop_delay,
                 self.frames,
-                easing.value
+                self.easing
             )
 
     def _show_cursor(self) -> None:

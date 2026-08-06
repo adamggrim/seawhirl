@@ -8,6 +8,7 @@ from typing import Any
 from wcwidth import wcswidth
 
 from seawhirl._worker import run_spinner, _calculate_current_fps
+from seawhirl.easing import EasingStrategy
 
 
 class SpinnerBackend(ABC):
@@ -21,7 +22,7 @@ class SpinnerBackend(ABC):
         peak_animation_fps: float,
         loop_delay: float,
         frames: list[str],
-        easing: str
+        easing: EasingStrategy
     ) -> None:
         self.stream = stream
         self.accel_secs = accel_secs

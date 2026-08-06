@@ -3,7 +3,8 @@ import sys
 import time
 
 from seawhirl.constants import PRESETS
-from seawhirl.spinner import Spinner, Easing
+from seawhirl.spinner import Spinner
+from seawhirl.easing import Logarithmic, Sinusoidal, Spring, Inertial
 
 
 def main() -> None:
@@ -57,12 +58,36 @@ def main() -> None:
     )
     parser.add_argument(
         '--easing',
-        choices=[e.value for e in Easing],
+        choices=['logarithmic', 'sinusoidal', 'spring', 'inertial'],
         default='logarithmic',
         help=(
             'Physics easing curve '
             "('logarithmic', 'sinusoidal', 'spring', 'inertial')"
         ),
+    )
+    parser.add_argument(
+        '--easing-base',
+        type=float,
+        default=10.0,
+        help='Base for logarithmic easing (default: 10.0)',
+    )
+    parser.add_argument(
+        '--easing-power',
+        type=float,
+        default=5.0,
+        help='Exponent for inertial easing (default: 5.0)',
+    )
+    parser.add_argument(
+        '--easing-tension',
+        type=float,
+        default=5.0,
+        help='Tension factor for spring easing (default: 5.0)',
+    )
+    parser.add_argument(
+        '--easing-friction',
+        type=float,
+        default=10.0,
+        help='Friction factor for spring easing (default: 10.0)',
     )
 
     args = parser.parse_args()
@@ -77,12 +102,24 @@ def main() -> None:
         f'for {args.duration}s (accel: {args.accel}s)...'
     )
 
+    if args.easing == 'sinusoidal':
+        easing_strategy = Sinusoidal()
+    elif args.easing == 'spring':
+        easing_strategy = Spring(
+            tension=args.easing_tension, friction=args.easing_friction
+        )
+    elif args.easing == 'inertial':
+        easing_strategy = Inertial(power=args.easing_power)
+    else:
+        easing_strategy = Logarithmic(base=args.easing_base)
+
     try:
         spinner = Spinner(
             accel_secs=args.accel,
             initial_fps=args.initial_fps,
             peak_animation_fps=args.peak_fps,
             frames=frames,
+            easing=easing_strategy,
         )
         with spinner:
             time.sleep(args.duration)

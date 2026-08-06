@@ -1,4 +1,14 @@
-from seawhirl.spinner import Spinner, run_with_spinner, Backend, Easing
+from seawhirl.spinner import Spinner, run_with_spinner, Backend
 from seawhirl.constants import PRESETS
+from seawhirl.easing import (
+    EasingStrategy,
+    Logarithmic,
+    Sinusoidal,
+    Spring,
+    Inertial
+)
 
-__all__ = ['Spinner', 'run_with_spinner', 'Backend', 'Easing', 'PRESETS']
+__all__ = [
+    'Spinner', 'run_with_spinner', 'Backend', 'PRESETS',
+    'EasingStrategy', 'Logarithmic', 'Sinusoidal', 'Spring', 'Inertial'
+]
