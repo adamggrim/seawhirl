@@ -143,7 +143,8 @@ class AsyncBackend(SpinnerBackend):
                     prev_rendered_idx = current_frame_idx
                     prev_rendered_len = char_width
 
-                await asyncio.sleep(self.loop_delay)
+                work_time = time.time() - now
+                await asyncio.sleep(max(0.0, self.loop_delay - work_time))
         except asyncio.CancelledError:
             pass
         finally:

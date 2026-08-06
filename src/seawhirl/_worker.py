@@ -78,7 +78,8 @@ def run_spinner(
                 prev_rendered_idx = current_frame_idx
                 prev_rendered_len = char_width
 
-            time.sleep(loop_delay)
+            work_time = time.time() - now
+            time.sleep(max(0.0, loop_delay - work_time))
     except KeyboardInterrupt:
         pass
     except Exception as e:
