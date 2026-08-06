@@ -1,8 +1,5 @@
 import asyncio
-import json
 import random
-import subprocess
-import sys
 import threading
 import time
 from abc import ABC, abstractmethod
@@ -53,32 +50,6 @@ class SpinnerBackend(ABC):
         Stop the asynchronous rendering loop. Defaults to sync stop.
         """
         self.stop()
-
-
-class SubprocessBackend(SpinnerBackend):
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        self._process: subprocess.Popen | None = None
-
-    def start(self) -> None:
-        self._process = subprocess.Popen(
-            [
-                sys.executable, '-m', 'seawhirl._worker',
-                '--accel', str(self.accel_secs),
-                '--initial', str(self.initial_fps),
-                '--peak', str(self.peak_animation_fps),
-                '--delay', str(self.loop_delay),
-                '--frames', json.dumps(self.frames)
-            ],
-            stdout=self.stream,
-            stderr=subprocess.DEVNULL
-        )
-
-    def stop(self) -> None:
-        if self._process is not None:
-            self._process.terminate()
-            self._process.wait()
-            self._process = None
 
 
 class ThreadBackend(SpinnerBackend):

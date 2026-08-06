@@ -6,10 +6,9 @@ from typing import Callable, Any
 
 from seawhirl.utils import is_supported_terminal, enable_windows_vt_processing
 from seawhirl.constants import SpinnerDefaults, PRESETS
-from seawhirl._backends import SubprocessBackend, ThreadBackend, AsyncBackend
+from seawhirl._backends import ThreadBackend, AsyncBackend
 
 class Backend(Enum):
-    SUBPROCESS = 'subprocess'
     THREAD = 'thread'
     ASYNC = 'async'
 
@@ -24,7 +23,7 @@ class Spinner:
         peak_render_fps: float = SpinnerDefaults.MAX_RENDER_FPS,
         frames: list[str] | str | None = None,
         stream: Any | None = None,
-        backend: Backend = Backend.SUBPROCESS
+        backend: Backend = Backend.THREAD
     ) -> None:
         self.stream = stream or sys.stdout
 
@@ -45,16 +44,7 @@ class Spinner:
         self.backend = backend
 
         loop_delay = 1.0 / peak_render_fps
-        if self.backend == Backend.SUBPROCESS:
-            self._worker = SubprocessBackend(
-                self.stream,
-                accel_secs,
-                initial_fps,
-                peak_animation_fps,
-                loop_delay,
-                self.frames
-            )
-        elif self.backend == Backend.THREAD:
+        if self.backend == Backend.THREAD:
             self._worker = ThreadBackend(
                 self.stream,
                 accel_secs,

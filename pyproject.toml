@@ -7,7 +7,7 @@ name = "seawhirl"
 version = "0.1"
 description = "Package for accelerating CLI spinners"
 readme = "README.md"
-keywords = ["spinner", "accelerating", "logarithmic", "multiprocessing"]
+keywords = ["spinner", "accelerating", "logarithmic"]
 license = {text = "MIT"}
 authors = [
   { name = "Adam Grim" }

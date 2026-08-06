@@ -1,5 +1,3 @@
-import argparse
-import json
 import math
 import random
 import sys
@@ -78,15 +76,3 @@ def run_spinner(
     finally:
         sys.stdout.write('\r\033[K')
         sys.stdout.flush()
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--accel', type=float, required=True)
-    parser.add_argument('--initial', type=float, required=True)
-    parser.add_argument('--peak', type=float, required=True)
-    parser.add_argument('--delay', type=float, required=True)
-    parser.add_argument('--frames', type=str, required=True)
-    args = parser.parse_args()
-
-    frames_list = json.loads(args.frames)
-    run_spinner(args.accel, args.initial, args.peak, args.delay, frames_list)
