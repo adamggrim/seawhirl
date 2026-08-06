@@ -136,6 +136,12 @@ class Spinner:
             return func(*args, **kwargs)
 
 
-def run_with_spinner(func: Callable, *args: Any, **kwargs: Any) -> Any:
-    spinner = Spinner()
+def run_with_spinner(
+    func: Callable,
+    *args: Any,
+    spinner_kwargs: dict[str, Any] | None = None,
+    **kwargs: Any
+) -> Any:
+    config = spinner_kwargs or {}
+    spinner = Spinner(**config)
     return spinner.run(func, *args, **kwargs)
