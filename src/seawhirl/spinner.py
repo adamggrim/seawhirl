@@ -28,7 +28,10 @@ class Spinner:
         frames: list[str] | str | None = None,
         stream: Any | None = None,
         backend: Backend = Backend.THREAD,
-        easing: EasingStrategy | None = None
+        easing: EasingStrategy | None = None,
+        status_text: str = '',
+        status_frames: list[str] | None = None,
+        status_fps: float = SpinnerDefaults.STATUS_FPS
     ) -> None:
         self.stream = stream or sys.stdout
 
@@ -50,6 +53,14 @@ class Spinner:
         self.easing = easing or Logarithmic()
         loop_delay = 1.0 / peak_render_fps
 
+        self._state = {"status_text": status_text}
+        self.status_frames = (
+            status_frames
+            if status_frames is not None
+            else SpinnerDefaults.STATUS_FRAMES
+        )
+        self.status_fps = status_fps
+
         if self.backend == Backend.THREAD:
             self._worker = ThreadBackend(
                 self.stream,
@@ -58,7 +69,10 @@ class Spinner:
                 peak_animation_fps,
                 loop_delay,
                 self.frames,
-                self.easing
+                self.easing,
+                self._state,
+                self.status_frames,
+                self.status_fps
             )
         elif self.backend == Backend.ASYNC:
             self._worker = AsyncBackend(
@@ -68,8 +82,17 @@ class Spinner:
                 peak_animation_fps,
                 loop_delay,
                 self.frames,
-                self.easing
+                self.easing,
+                self._state,
+                self.status_frames,
+                self.status_fps
             )
+
+    def update(self, status_text: str) -> None:
+        """
+        Dynamically update the status text while the spinner is running.
+        """
+        self._state['status_text'] = status_text
 
     def _show_cursor(self) -> None:
         if not self._disabled:

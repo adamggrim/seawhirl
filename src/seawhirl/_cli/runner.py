@@ -89,6 +89,18 @@ def main() -> None:
         default=10.0,
         help='Friction factor for spring easing (default: 10.0)',
     )
+    parser.add_argument(
+        '--status-text',
+        type=str,
+        default='',
+        help='Initial status text to display next to the spinner',
+    )
+    parser.add_argument(
+        '--status-fps',
+        type=float,
+        default=2.0,
+        help='Frames per second for the status text suffix (default: 2.0)',
+    )
 
     args = parser.parse_args()
 
@@ -120,6 +132,8 @@ def main() -> None:
             peak_animation_fps=args.peak_fps,
             frames=frames,
             easing=easing_strategy,
+            status_text=args.status_text,
+            status_fps=args.status_fps,
         )
         with spinner:
             time.sleep(args.duration)

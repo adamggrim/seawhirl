@@ -31,12 +31,21 @@ def run_spinner(
     loop_delay: float,
     frames: list[str],
     easing: EasingStrategy,
-    stop_event: threading.Event | None = None
+    stop_event: threading.Event | None = None,
+    status_state: dict[str, str] | None = None,
+    status_frames: list[str] | None = None,
+    status_fps: float = 2.0
 ) -> None:
+    state = status_state or {}
+    s_frames = status_frames or ['']
+
     num_frames = len(frames)
+    num_status_frames = len(s_frames)
+
     current_frame = float(random.randint(0, num_frames - 1))
-    prev_rendered_idx = -1
-    prev_rendered_len = 0
+    current_status_frame = 0.0
+
+    prev_rendered_str = ''
     start_time = prev_update_time = time.time()
 
     try:
@@ -53,23 +62,32 @@ def run_spinner(
             current_frame += current_fps * elapsed_since_last
             current_frame_idx = int(current_frame) % num_frames
 
-            if current_frame_idx != prev_rendered_idx:
-                char = frames[current_frame_idx]
-                char_width = max(0, wcswidth(char))
+            current_status_frame += status_fps * elapsed_since_last
+            status_frame_idx = int(current_status_frame) % num_status_frames
 
-                if prev_rendered_idx == -1:
-                    sys.stdout.write(char)
+            icon = frames[current_frame_idx]
+            text = state.get('status_text', '')
+            suffix = s_frames[status_frame_idx] if text else ''
+
+            display_str = f'{icon} {text}{suffix}' if text else icon
+
+            if display_str != prev_rendered_str:
+                char_width = max(0, wcswidth(display_str))
+                prev_width = max(0, wcswidth(prev_rendered_str))
+
+                if prev_rendered_str == '':
+                    sys.stdout.write(display_str)
                 else:
-                    backspaces = '\b' * prev_rendered_len
-                    padding_spaces = ' ' * max(0, prev_rendered_len - char_width)
+                    backspaces = '\b' * prev_width
+                    padding_spaces = ' ' * max(0, prev_width - char_width)
                     back_padding = '\b' * len(padding_spaces)
                     sys.stdout.write(
-                        f'{backspaces}{char}{padding_spaces}{back_padding}'
+                        f'{backspaces}{display_str}{padding_spaces}'
+                        '{back_padding}'
                     )
 
                 sys.stdout.flush()
-                prev_rendered_idx = current_frame_idx
-                prev_rendered_len = char_width
+                prev_rendered_str = display_str
 
             work_time = time.time() - now
             time.sleep(max(0.0, loop_delay - work_time))

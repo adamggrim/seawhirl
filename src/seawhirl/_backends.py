@@ -15,14 +15,16 @@ class SpinnerBackend(ABC):
     """Abstract interface for all rendering backends."""
 
     def __init__(
-        self,
-        stream: Any,
+        self, stream: Any,
         accel_secs: float,
         initial_fps: float,
         peak_animation_fps: float,
         loop_delay: float,
         frames: list[str],
-        easing: EasingStrategy
+        easing: EasingStrategy,
+        status_state: dict[str, str],
+        status_frames: list[str],
+        status_fps: float
     ) -> None:
         self.stream = stream
         self.accel_secs = accel_secs
@@ -31,6 +33,9 @@ class SpinnerBackend(ABC):
         self.loop_delay = loop_delay
         self.frames = frames
         self.easing = easing
+        self.status_state = status_state
+        self.status_frames = status_frames
+        self.status_fps = status_fps
 
     @abstractmethod
     def start(self) -> None:
@@ -72,7 +77,10 @@ class ThreadBackend(SpinnerBackend):
                 self.loop_delay,
                 self.frames,
                 self.easing,
-                self._stop_event
+                self._stop_event,
+                self.status_state,
+                self.status_frames,
+                self.status_fps
             ),
             daemon=True
         )
@@ -101,9 +109,14 @@ class AsyncBackend(SpinnerBackend):
 
     async def _async_render_loop(self) -> None:
         num_frames = len(self.frames)
+        num_status_frames = (
+            len(self.status_frames)
+            if self.status_frames
+            else 1
+        )
         current_frame = float(random.randint(0, num_frames - 1))
-        prev_rendered_idx = -1
-        prev_rendered_len = 0
+        current_status_frame = 0.0
+        prev_rendered_str = ''
         start_time = prev_update_time = time.time()
 
         try:
@@ -124,25 +137,36 @@ class AsyncBackend(SpinnerBackend):
                 current_frame += current_fps * elapsed_since_last
                 current_frame_idx = int(current_frame) % num_frames
 
-                if current_frame_idx != prev_rendered_idx:
-                    char = self.frames[current_frame_idx]
-                    char_width = max(0, wcswidth(char))
+                current_status_frame += self.status_fps * elapsed_since_last
+                status_frame_idx = int(current_status_frame) % num_status_frames
 
-                    if prev_rendered_idx == -1:
-                        self.stream.write(char)
+                icon = self.frames[current_frame_idx]
+                text = self.status_state.get('status_text', '')
+                suffix = (
+                    self.status_frames[status_frame_idx]
+                    if text and self.status_frames
+                    else ''
+                )
+
+                display_str = f'{icon} {text}{suffix}' if text else icon
+
+                if display_str != prev_rendered_str:
+                    char_width = max(0, wcswidth(display_str))
+                    prev_width = max(0, wcswidth(prev_rendered_str))
+
+                    if prev_rendered_str == '':
+                        self.stream.write(display_str)
                     else:
-                        backspaces = '\b' * prev_rendered_len
-                        padding_spaces = ' ' * max(
-                            0, prev_rendered_len - char_width
-                        )
+                        backspaces = '\b' * prev_width
+                        padding_spaces = ' ' * max(0, prev_width - char_width)
                         back_padding = '\b' * len(padding_spaces)
                         self.stream.write(
-                            f'{backspaces}{char}{padding_spaces}{back_padding}'
+                            f'{backspaces}{display_str}{padding_spaces}'
+                            '{back_padding}'
                         )
 
                     self.stream.flush()
-                    prev_rendered_idx = current_frame_idx
-                    prev_rendered_len = char_width
+                    prev_rendered_str = display_str
 
                 work_time = time.time() - now
                 await asyncio.sleep(max(0.0, self.loop_delay - work_time))
