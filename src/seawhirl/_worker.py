@@ -25,6 +25,82 @@ def _calculate_current_fps(
     return initial_fps + (peak_fps - initial_fps) * multiplier
 
 
+class RenderEngine:
+    def __init__(
+        self,
+        accel_secs: float,
+        initial_fps: float,
+        peak_fps: float,
+        frames: list[str],
+        easing: EasingStrategy,
+        status_state: dict[str, str],
+        status_frames: list[str],
+        status_fps: float
+    ) -> None:
+        self.accel_secs = accel_secs
+        self.initial_fps = initial_fps
+        self.peak_fps = peak_fps
+        self.frames = frames
+        self.easing = easing
+        self.status_state = status_state
+        self.status_frames = status_frames
+        self.status_fps = status_fps
+
+        self.num_frames = len(self.frames)
+        self.num_status_frames = (
+            len(self.status_frames) if self.status_frames else 1
+        )
+
+        self.current_frame = float(random.randint(0, self.num_frames - 1))
+        self.current_status_frame = 0.0
+
+        self.prev_rendered_str = ''
+        self.start_time = time.time()
+        self.prev_update_time = self.start_time
+
+    def tick(self, now: float) -> str | None:
+        elapsed_total = now - self.start_time
+        elapsed_since_last = now - self.prev_update_time
+        self.prev_update_time = now
+
+        current_fps = _calculate_current_fps(
+            elapsed_total,
+            self.accel_secs,
+            self.initial_fps,
+            self.peak_fps,
+            self.easing
+        )
+
+        self.current_frame += current_fps * elapsed_since_last
+        current_frame_idx = int(self.current_frame) % self.num_frames
+
+        self.current_status_frame += self.status_fps * elapsed_since_last
+        status_frame_idx = (
+            int(self.current_status_frame) % self.num_status_frames
+        )
+
+        icon = self.frames[current_frame_idx]
+        text = self.status_state.get('status_text', '')
+        suffix = (
+            self.status_frames[status_frame_idx]
+            if text and self.status_frames
+            else ''
+        )
+
+        display_str = f'{icon} {text}{suffix}' if text else icon
+
+        if display_str != self.prev_rendered_str:
+            console_width = max(10, shutil.get_terminal_size().columns - 1)
+
+            if wcswidth(display_str) > console_width:
+                display_str = display_str[:console_width - 2] + '…'
+
+            self.prev_rendered_str = display_str
+            return display_str
+
+        return None
+
+
 def run_spinner(
     accel_secs: float,
     initial_fps: float,
@@ -37,50 +113,25 @@ def run_spinner(
     status_frames: list[str] | None = None,
     status_fps: float = 2.0
 ) -> None:
-    state = status_state or {}
-    s_frames = status_frames or ['']
-
-    num_frames = len(frames)
-    num_status_frames = len(s_frames)
-
-    current_frame = float(random.randint(0, num_frames - 1))
-    current_status_frame = 0.0
-
-    prev_rendered_str = ''
-    start_time = prev_update_time = time.time()
+    engine = RenderEngine(
+        accel_secs,
+        initial_fps,
+        peak_fps,
+        frames,
+        easing,
+        status_state or {},
+        status_frames or [''],
+        status_fps
+    )
 
     try:
         while stop_event is None or not stop_event.is_set():
             now = time.time()
-            elapsed_total = now - start_time
-            elapsed_since_last = now - prev_update_time
-            prev_update_time = now
+            display_str = engine.tick(now)
 
-            current_fps = _calculate_current_fps(
-                elapsed_total, accel_secs, initial_fps, peak_fps, easing
-            )
-
-            current_frame += current_fps * elapsed_since_last
-            current_frame_idx = int(current_frame) % num_frames
-
-            current_status_frame += status_fps * elapsed_since_last
-            status_frame_idx = int(current_status_frame) % num_status_frames
-
-            icon = frames[current_frame_idx]
-            text = state.get('status_text', '')
-            suffix = s_frames[status_frame_idx] if text else ''
-
-            display_str = f'{icon} {text}{suffix}' if text else icon
-
-            if display_str != prev_rendered_str:
-                console_width = max(10, shutil.get_terminal_size().columns - 1)
-
-                if wcswidth(display_str) > console_width:
-                    display_str = display_str[:console_width - 2] + '…'
-
+            if display_str is not None:
                 sys.stdout.write(f'\r\033[K{display_str}')
                 sys.stdout.flush()
-                prev_rendered_str = display_str
 
             work_time = time.time() - now
             time.sleep(max(0.0, loop_delay - work_time))

@@ -1,14 +1,10 @@
 import asyncio
-import random
-import shutil
 import threading
 import time
 from abc import ABC, abstractmethod
 from typing import Any
 
-from wcwidth import wcswidth
-
-from seawhirl._worker import run_spinner, _calculate_current_fps
+from seawhirl._worker import run_spinner, RenderEngine
 from seawhirl.easing import EasingStrategy
 
 
@@ -109,57 +105,25 @@ class AsyncBackend(SpinnerBackend):
         pass
 
     async def _async_render_loop(self) -> None:
-        num_frames = len(self.frames)
-        num_status_frames = (
-            len(self.status_frames)
-            if self.status_frames
-            else 1
+        engine = RenderEngine(
+            self.accel_secs,
+            self.initial_fps,
+            self.peak_animation_fps,
+            self.frames,
+            self.easing,
+            self.status_state,
+            self.status_frames,
+            self.status_fps
         )
-        current_frame = float(random.randint(0, num_frames - 1))
-        current_status_frame = 0.0
-        prev_rendered_str = ''
-        start_time = prev_update_time = time.time()
 
         try:
             while True:
                 now = time.time()
-                elapsed_total = now - start_time
-                elapsed_since_last = now - prev_update_time
-                prev_update_time = now
+                display_str = engine.tick(now)
 
-                current_fps = _calculate_current_fps(
-                    elapsed_total,
-                    self.accel_secs,
-                    self.initial_fps,
-                    self.peak_animation_fps,
-                    self.easing
-                )
-
-                current_frame += current_fps * elapsed_since_last
-                current_frame_idx = int(current_frame) % num_frames
-
-                current_status_frame += self.status_fps * elapsed_since_last
-                status_frame_idx = int(current_status_frame) % num_status_frames
-
-                icon = self.frames[current_frame_idx]
-                text = self.status_state.get('status_text', '')
-                suffix = (
-                    self.status_frames[status_frame_idx]
-                    if text and self.status_frames
-                    else ''
-                )
-
-                display_str = f'{icon} {text}{suffix}' if text else icon
-
-                if display_str != prev_rendered_str:
-                    console_width = max(10, shutil.get_terminal_size().columns - 1)
-
-                    if wcswidth(display_str) > console_width:
-                        display_str = display_str[:console_width - 2] + '…'
-
+                if display_str is not None:
                     self.stream.write(f'\r\033[K{display_str}')
                     self.stream.flush()
-                    prev_rendered_str = display_str
 
                 work_time = time.time() - now
                 await asyncio.sleep(max(0.0, self.loop_delay - work_time))
