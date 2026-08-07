@@ -1,5 +1,6 @@
 import asyncio
 import random
+import shutil
 import threading
 import time
 from abc import ABC, abstractmethod
@@ -151,20 +152,12 @@ class AsyncBackend(SpinnerBackend):
                 display_str = f'{icon} {text}{suffix}' if text else icon
 
                 if display_str != prev_rendered_str:
-                    char_width = max(0, wcswidth(display_str))
-                    prev_width = max(0, wcswidth(prev_rendered_str))
+                    console_width = max(10, shutil.get_terminal_size().columns - 1)
 
-                    if prev_rendered_str == '':
-                        self.stream.write(display_str)
-                    else:
-                        backspaces = '\b' * prev_width
-                        padding_spaces = ' ' * max(0, prev_width - char_width)
-                        back_padding = '\b' * len(padding_spaces)
-                        self.stream.write(
-                            f'{backspaces}{display_str}{padding_spaces}'
-                            '{back_padding}'
-                        )
+                    if wcswidth(display_str) > console_width:
+                        display_str = display_str[:console_width - 2] + '…'
 
+                    self.stream.write(f'\r\033[K{display_str}')
                     self.stream.flush()
                     prev_rendered_str = display_str
 
