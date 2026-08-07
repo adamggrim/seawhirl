@@ -50,6 +50,9 @@ class RenderEngine:
         self.num_status_frames = (
             len(self.status_frames) if self.status_frames else 1
         )
+        self.max_frame_width = max(
+            (max(0, wcswidth(f)) for f in self.frames), default=0
+        )
 
         self.current_frame = float(random.randint(0, self.num_frames - 1))
         self.current_status_frame = 0.0
@@ -87,7 +90,12 @@ class RenderEngine:
             else ''
         )
 
-        display_str = f'{icon} {text}{suffix}' if text else icon
+        if text:
+            icon_width = max(0, wcswidth(icon))
+            padding = ' ' * (self.max_frame_width - icon_width)
+            display_str = f'{icon}{padding} {text}{suffix}'
+        else:
+            display_str = icon
 
         if display_str != self.prev_rendered_str:
             console_width = max(10, shutil.get_terminal_size().columns - 1)

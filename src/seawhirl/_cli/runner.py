@@ -8,10 +8,18 @@ from seawhirl.easing import Logarithmic, Sinusoidal, Spring, Inertial
 
 
 def main() -> None:
+    def formatter(prog: str) -> argparse.HelpFormatter:
+        """
+        A custom help formatter to align help messages neatly based on
+        the maximum argument width.
+        """
+        return argparse.RawTextHelpFormatter(prog, max_help_position=79)
+
     parser = argparse.ArgumentParser(
         description=(
             'Run and test seawhirl spinner animations in the terminal.'
-        )
+        ),
+        formatter_class=formatter
     )
 
     parser.add_argument(
@@ -102,17 +110,16 @@ def main() -> None:
         help='Frames per second for the status text suffix (default: 2.0)',
     )
 
+    if len(sys.argv) == 1 and sys.stdin.isatty():
+        parser.print_help(sys.stderr)
+        sys.exit(1)
+
     args = parser.parse_args()
 
     if args.custom:
         frames = args.custom.split(',')
     else:
         frames = PRESETS[args.mode]
-
-    print(
-        f"Spinning mode='{args.custom and 'custom' or args.mode}' "
-        f'for {args.duration}s (accel: {args.accel}s)...'
-    )
 
     if args.easing == 'sinusoidal':
         easing_strategy = Sinusoidal()
@@ -139,5 +146,5 @@ def main() -> None:
             time.sleep(args.duration)
         print('Completed.')
     except KeyboardInterrupt:
-        print('\nAborted.')
+        print('Stopped.')
         sys.exit(1)
