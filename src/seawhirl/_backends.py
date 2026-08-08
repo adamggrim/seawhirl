@@ -119,10 +119,10 @@ class AsyncBackend(SpinnerBackend):
         try:
             while True:
                 now = time.time()
-                display_str = engine.tick(now)
+                rendered_frame = engine.tick(now)
 
-                if display_str is not None:
-                    self.stream.write(f'\r\033[K{display_str}')
+                if rendered_frame is not None:
+                    self.stream.write(f'\r\033[K{rendered_frame}')
                     self.stream.flush()
 
                 work_time = time.time() - now

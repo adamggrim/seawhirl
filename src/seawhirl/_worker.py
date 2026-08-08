@@ -4,9 +4,8 @@ import sys
 import threading
 import time
 
-from wcwidth import wcswidth
-
 from seawhirl.easing import EasingStrategy
+from seawhirl.utils import COMPLEX_EMOJI_PATTERN, get_visual_width
 
 
 def _calculate_current_fps(
@@ -51,13 +50,13 @@ class RenderEngine:
             len(self.status_frames) if self.status_frames else 1
         )
         self.max_frame_width = max(
-            (max(0, wcswidth(f)) for f in self.frames), default=0
+            (get_visual_width(f) for f in self.frames), default=0
         )
 
         self.current_frame = float(random.randint(0, self.num_frames - 1))
         self.current_status_frame = 0.0
 
-        self.prev_rendered_str = ''
+        self.prev_rendered_frame = ''
         self.start_time = time.time()
         self.prev_update_time = self.start_time
 
@@ -91,20 +90,46 @@ class RenderEngine:
         )
 
         if text:
-            icon_width = max(0, wcswidth(icon))
-            padding = ' ' * (self.max_frame_width - icon_width)
-            display_str = f'{icon}{padding} {text}{suffix}'
-        else:
-            display_str = icon
-
-        if display_str != self.prev_rendered_str:
+            full_text = f'{text}{suffix}'
             console_width = max(10, shutil.get_terminal_size().columns - 1)
+            avail_width = console_width - (self.max_frame_width + 1)
 
-            if wcswidth(display_str) > console_width:
-                display_str = display_str[:console_width - 2] + '…'
+            if get_visual_width(full_text) > avail_width:
+                truncated_text = ''
+                curr_w = 0
 
-            self.prev_rendered_str = display_str
-            return display_str
+                tokens = [
+                    t for t in COMPLEX_EMOJI_PATTERN.split(full_text) if t
+                ]
+
+                # Complex emojis stay grouped, with other text split
+                # into chararacters.
+                graphemes = []
+                for token in tokens:
+                    if COMPLEX_EMOJI_PATTERN.fullmatch(token):
+                        graphemes.append(token)
+                    else:
+                        graphemes.extend(list(token))
+
+                for cluster in graphemes:
+                    cluster_w = get_visual_width(cluster)
+                    if curr_w + cluster_w > avail_width - 1:
+                        truncated_text += '…'
+                        break
+                    truncated_text += cluster
+                    curr_w += cluster_w
+
+                full_text = truncated_text
+
+            rendered_frame = (
+                f'{icon}\033[{self.max_frame_width + 2}G{full_text}'
+            )
+        else:
+            rendered_frame = icon
+
+        if rendered_frame != self.prev_rendered_frame:
+            self.prev_rendered_frame = rendered_frame
+            return rendered_frame
 
         return None
 
@@ -135,10 +160,10 @@ def run_spinner(
     try:
         while stop_event is None or not stop_event.is_set():
             now = time.time()
-            display_str = engine.tick(now)
+            rendered_frame = engine.tick(now)
 
-            if display_str is not None:
-                sys.stdout.write(f'\r\033[K{display_str}')
+            if rendered_frame is not None:
+                sys.stdout.write(f'\r\033[K{rendered_frame}')
                 sys.stdout.flush()
 
             work_time = time.time() - now
