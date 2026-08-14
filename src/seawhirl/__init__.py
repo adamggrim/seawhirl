@@ -9,6 +9,13 @@ from seawhirl.easing import (
 )
 
 __all__ = [
-    'Spinner', 'run_with_spinner', 'Backend', 'PRESETS',
-    'EasingStrategy', 'Logarithmic', 'Sinusoidal', 'Spring', 'Inertial'
+    'Backend',
+    'EasingStrategy',
+    'Inertial',
+    'Logarithmic',
+    'PRESETS',
+    'Sinusoidal',
+    'Spinner',
+    'Spring',
+    'run_with_spinner'
 ]
