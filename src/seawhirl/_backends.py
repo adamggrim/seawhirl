@@ -68,6 +68,7 @@ class ThreadBackend(SpinnerBackend):
         self._thread = threading.Thread(
             target=run_spinner,
             args=(
+                self.stream,
                 self.accel_secs,
                 self.initial_fps,
                 self.peak_animation_fps,

@@ -3,6 +3,7 @@ import shutil
 import sys
 import threading
 import time
+from typing import TextIO
 
 from seawhirl.easing import EasingStrategy
 from seawhirl.utils import COMPLEX_EMOJI_PATTERN, get_visual_width
@@ -135,6 +136,7 @@ class RenderEngine:
 
 
 def run_spinner(
+    stream: TextIO,
     accel_secs: float,
     initial_fps: float,
     peak_fps: float,
@@ -163,8 +165,8 @@ def run_spinner(
             rendered_frame = engine.tick(now)
 
             if rendered_frame is not None:
-                sys.stdout.write(f'\r\033[K{rendered_frame}')
-                sys.stdout.flush()
+                stream.write(f'\r\033[K{rendered_frame}')
+                stream.flush()
 
             work_time = time.time() - now
             time.sleep(max(0.0, loop_delay - work_time))
@@ -174,5 +176,5 @@ def run_spinner(
         sys.stderr.write(f'\nSpinner worker encountered an error: {e}\n')
         sys.stderr.flush()
     finally:
-        sys.stdout.write('\r\033[K')
-        sys.stdout.flush()
+        stream.write('\r\033[K')
+        stream.flush()

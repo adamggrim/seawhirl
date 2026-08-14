@@ -1,10 +1,14 @@
 import inspect
 import sys
+from collections.abc import Callable
 from enum import Enum
 from functools import wraps
-from typing import Callable, Any
+from typing import Any, TextIO
 
-from seawhirl.utils import is_supported_terminal, enable_windows_vt_processing
+from seawhirl.utils import (
+    is_supported_terminal,
+    enable_windows_vt_processing
+)
 from seawhirl.constants import SpinnerDefaults, PRESETS
 from seawhirl._backends import ThreadBackend, AsyncBackend
 from seawhirl.easing import EasingStrategy, Logarithmic
