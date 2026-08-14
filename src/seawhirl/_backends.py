@@ -2,7 +2,7 @@ import asyncio
 import threading
 import time
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, TextIO
 
 from seawhirl._worker import run_spinner, RenderEngine
 from seawhirl.easing import EasingStrategy
@@ -12,7 +12,7 @@ class SpinnerBackend(ABC):
     """Abstract interface for all rendering backends."""
 
     def __init__(
-        self, stream: Any,
+        self, stream: TextIO,
         accel_secs: float,
         initial_fps: float,
         peak_animation_fps: float,

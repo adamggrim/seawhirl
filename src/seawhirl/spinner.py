@@ -30,7 +30,7 @@ class Spinner:
         peak_animation_fps: float = SpinnerDefaults.PEAK_ANIMATION_FPS,
         peak_render_fps: float = SpinnerDefaults.MAX_RENDER_FPS,
         frames: list[str] | str | None = None,
-        stream: Any | None = None,
+        stream: TextIO | None = None,
         backend: Backend = Backend.THREAD,
         easing: EasingStrategy | None = None,
         status_text: str = '',
