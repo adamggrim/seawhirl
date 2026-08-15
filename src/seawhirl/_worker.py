@@ -92,7 +92,12 @@ class RenderEngine:
 
         if text:
             full_text = f'{text}{suffix}'
-            console_width = max(10, shutil.get_terminal_size().columns - 1)
+
+            if 'console_width' in self.status_state:
+                console_width = self.status_state['console_width']
+            else:
+                console_width = max(10, shutil.get_terminal_size().columns - 1)
+
             avail_width = console_width - (self.max_frame_width + 1)
 
             if get_visual_width(full_text) > avail_width:
