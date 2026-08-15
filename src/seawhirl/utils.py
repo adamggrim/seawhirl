@@ -1,3 +1,4 @@
+import os
 import platform
 import re
 from typing import Any
@@ -61,8 +62,14 @@ def enable_windows_vt_processing() -> None:
 
 
 def is_supported_terminal(stream: Any) -> bool:
-    is_tty = hasattr(stream, 'isatty') and stream.isatty()
+    if (
+        os.environ.get('CI')
+        or os.environ.get('NO_COLOR')
+        or os.environ.get('TERM') == 'dumb'
+    ):
+        return False
 
+    is_tty = hasattr(stream, 'isatty') and stream.isatty()
     is_utf8 = getattr(stream, 'encoding', '').lower() in ('utf-8', 'utf8')
     return is_tty and is_utf8
 
