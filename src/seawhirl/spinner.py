@@ -1,3 +1,4 @@
+import atexit
 import inspect
 import shutil
 import signal
@@ -6,7 +7,7 @@ import threading
 from collections.abc import Callable
 from enum import Enum
 from functools import wraps
-from typing import Any, TextIO
+from typing import Any, TextIO, TypeVar, ParamSpec, cast
 
 from seawhirl.utils import (
     is_supported_terminal,
@@ -23,6 +24,30 @@ class Backend(Enum):
 
 
 __all__ = ['Spinner', 'run_with_spinner', 'Backend']
+
+P = ParamSpec('P')
+T = TypeVar('T')
+
+
+class _StreamProxy:
+    """
+    Class for intercepting `print()` calls to prevent visual tearing.
+    """
+    def __init__(self, original_stream: TextIO) -> None:
+        self._original_stream = original_stream
+
+    def write(self, data: str) -> int:
+        if data == '\n':
+            self._original_stream.write(data)
+        else:
+            self._original_stream.write(f'\r\033[K{data}')
+        return len(data)
+
+    def flush(self) -> None:
+        self._original_stream.flush()
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._original_stream, name)
 
 
 class Spinner:
@@ -73,6 +98,7 @@ class Spinner:
             else SpinnerDefaults.STATUS_FRAMES
         )
         self.status_fps = status_fps
+        self._original_stdout: TextIO | None = None
 
         if self.backend == Backend.THREAD:
             self._worker = ThreadBackend(
@@ -101,11 +127,10 @@ class Spinner:
                 self.status_fps
             )
 
-    def update(self, status_text: str) -> None:
-        """
-        Dynamically update the status text while the spinner is running.
-        """
-        self._state['status_text'] = status_text
+    def _apply_stdout_proxy(self) -> None:
+        if self.stream == sys.stdout:
+            self._original_stdout = sys.stdout
+            sys.stdout = cast(TextIO, _StreamProxy(sys.stdout))
 
     def _show_cursor(self) -> None:
         if not self._disabled:
@@ -153,10 +178,17 @@ class Spinner:
             except (ValueError, OSError):
                 pass
 
+    def _restore_stdout_proxy(self) -> None:
+        if self._original_stdout is not None:
+            sys.stdout = self._original_stdout
+            self._original_stdout = None
+
     def start(self) -> None:
         if self._disabled:
             return
         self._hide_cursor()
+        atexit.register(self._show_cursor)
+        self._apply_stdout_proxy()
         self._register_resize_handler()
         self._worker.start()
 
@@ -165,11 +197,21 @@ class Spinner:
             return
         self._worker.stop()
         self._restore_resize_handler()
+        self._restore_stdout_proxy()
         self._show_cursor()
+        atexit.unregister(self._show_cursor)
+
+    def update(self, status_text: str) -> None:
+        """
+        Dynamically update the status text while the spinner is running.
+        """
+        self._state['status_text'] = status_text
 
     async def __aenter__(self):
         if not self._disabled:
             self._hide_cursor()
+            atexit.register(self._show_cursor)
+            self._apply_stdout_proxy()
             self._register_resize_handler()
             await self._worker.astart()
         return self
@@ -178,7 +220,9 @@ class Spinner:
         if not self._disabled:
             await self._worker.astop()
             self._restore_resize_handler()
+            self._restore_stdout_proxy()
             self._show_cursor()
+            atexit.unregister(self._show_cursor)
 
     def __enter__(self):
         self.start()
@@ -187,19 +231,19 @@ class Spinner:
     def __exit__(self, *_):
         self.stop()
 
-    def __call__(self, func: Callable) -> Callable:
+    def __call__(self, func: Callable[P, T]) -> Callable[P, T]:
         if inspect.iscoroutinefunction(func):
             @wraps(func)
-            async def async_wrapper(*args, **kwargs):
+            async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> Any:
                 async with self:
                     return await func(*args, **kwargs)
-            return async_wrapper
+            return cast(Callable[P, T], async_wrapper)
 
         @wraps(func)
-        def sync_wrapper(*args, **kwargs):
+        def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> Any:
             with self:
                 return func(*args, **kwargs)
-        return sync_wrapper
+        return cast(Callable[P, T], sync_wrapper)
 
     def run(self, func: Callable, *args: Any, **kwargs: Any) -> Any:
         with self:
