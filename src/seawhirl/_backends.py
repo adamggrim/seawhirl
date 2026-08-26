@@ -98,8 +98,8 @@ class AsyncBackend(SpinnerBackend):
 
     def start(self) -> None:
         raise RuntimeError(
-            "`AsyncBackend` cannot start synchronously. Please use 'aync with'"
-            'or decorate an async function.'
+            "`AsyncBackend` cannot start synchronously. Please use 'async "
+            "with' or decorate an async function.'"
         )
 
     def stop(self) -> None:

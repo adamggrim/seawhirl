@@ -23,7 +23,7 @@ class Backend(Enum):
     ASYNC = 'async'
 
 
-__all__ = ['Spinner', 'run_with_spinner', 'Backend']
+__all__ = ['Spinner', 'Backend']
 
 P = ParamSpec('P')
 T = TypeVar('T')
@@ -35,12 +35,18 @@ class _StreamProxy:
     """
     def __init__(self, original_stream: TextIO) -> None:
         self._original_stream = original_stream
+        self._is_new_line = True
 
     def write(self, data: str) -> int:
         if data == '\n':
             self._original_stream.write(data)
+            self._is_new_line = True
         else:
-            self._original_stream.write(f'\r\033[K{data}')
+            if self._is_new_line:
+                self._original_stream.write(f'\r\033[K{data}')
+                self._is_new_line = False
+            else:
+                self._original_stream.write(data)
         return len(data)
 
     def flush(self) -> None:
@@ -244,18 +250,3 @@ class Spinner:
             with self:
                 return func(*args, **kwargs)
         return cast(Callable[P, T], sync_wrapper)
-
-    def run(self, func: Callable, *args: Any, **kwargs: Any) -> Any:
-        with self:
-            return func(*args, **kwargs)
-
-
-def run_with_spinner(
-    func: Callable,
-    *args: Any,
-    spinner_kwargs: dict[str, Any] | None = None,
-    **kwargs: Any
-) -> Any:
-    config = spinner_kwargs or {}
-    spinner = Spinner(**config)
-    return spinner.run(func, *args, **kwargs)
