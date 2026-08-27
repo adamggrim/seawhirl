@@ -33,7 +33,7 @@ def main() -> None:
         command_lines.append(f'  {name} ({preview})')
 
     presets_description = (
-        'Preview seawhirl spinners in the terminal.\n\n' +
+        'Preview spinners directly in the terminal.\n\n' +
         '\n'.join(command_lines)
     )
 
@@ -41,7 +41,7 @@ def main() -> None:
         usage='seawhirl [preset] [options]',
         description=presets_description,
         epilog=(
-            'To access advanced physics, use the seawhirl API.'
+            'To access advanced physics, use the package API.'
         ),
         formatter_class=formatter
     )
