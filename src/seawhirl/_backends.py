@@ -10,7 +10,6 @@ from seawhirl.engine import RenderEngine
 
 
 class SpinnerBackend(ABC):
-    """Abstract interface for all rendering backends."""
     def __init__(
         self, stream: TextIO,
         accel_secs: float,
@@ -21,7 +20,8 @@ class SpinnerBackend(ABC):
         easing: EasingStrategy,
         status_state: dict[str, str],
         status_frames: list[str],
-        status_fps: float
+        status_fps: float,
+        oscillation: bool = False
     ) -> None:
         self.stream = stream
         self.accel_secs = accel_secs
@@ -30,6 +30,7 @@ class SpinnerBackend(ABC):
         self.loop_delay = loop_delay
         self.frames = frames
         self.easing = easing
+        self.oscillation = oscillation
         self.status_state = status_state
         self.status_frames = status_frames
         self.status_fps = status_fps
@@ -88,7 +89,8 @@ class ThreadBackend(SpinnerBackend):
             self.easing,
             self.status_state,
             self.status_frames,
-            self.status_fps
+            self.status_fps,
+            self.oscillation
         )
 
         try:
@@ -165,7 +167,8 @@ class AsyncBackend(SpinnerBackend):
             self.easing,
             self.status_state,
             self.status_frames,
-            self.status_fps
+            self.status_fps,
+            self.oscillation
         )
 
         try:

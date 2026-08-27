@@ -44,7 +44,8 @@ class Spinner:
         easing: EasingStrategy | None = None,
         status_text: str = '',
         status_frames: list[str] | None = None,
-        status_fps: float = SpinnerDefaults.STATUS_FPS
+        status_fps: float = SpinnerDefaults.STATUS_FPS,
+        oscillation: bool = False
     ) -> None:
         self.stream = stream or sys.stdout
 
@@ -92,7 +93,8 @@ class Spinner:
                 self.easing,
                 self._state,
                 self.status_frames,
-                self.status_fps
+                self.status_fps,
+                oscillation
             )
         elif self.backend == Backend.ASYNC:
             self._worker = AsyncBackend(
@@ -105,7 +107,8 @@ class Spinner:
                 self.easing,
                 self._state,
                 self.status_frames,
-                self.status_fps
+                self.status_fps,
+                oscillation
             )
 
     def _apply_stdout_proxy(self) -> None:

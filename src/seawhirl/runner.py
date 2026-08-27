@@ -86,6 +86,13 @@ def main() -> None:
         metavar='<str>',
         help='status text to display next to the spinner'
     )
+    parser.add_argument(
+        '--oscillation',
+        action='store_true',
+        help='pulse the animation speed back and forth'
+    )
+
+    args = parser.parse_args()
 
     args = parser.parse_args()
 
@@ -109,6 +116,7 @@ def main() -> None:
             frames=frames,
             easing=easing_strategy,
             status_text=args.status_text,
+            oscillation=args.oscillation,
         )
         with spinner:
             time.sleep(args.duration)

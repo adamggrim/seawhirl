@@ -11,12 +11,18 @@ def _calculate_current_fps(
     accel_secs: float,
     initial_fps: float,
     peak_fps: float,
-    easing: EasingStrategy
+    easing: EasingStrategy,
+    oscillation: bool = False
 ) -> float:
-    if elapsed_total >= accel_secs:
+    if not oscillation and elapsed_total >= accel_secs:
         return peak_fps
 
-    progress = elapsed_total / accel_secs
+    if oscillation:
+        cycle = (elapsed_total / accel_secs) % 2.0
+        progress = cycle if cycle <= 1.0 else 2.0 - cycle
+    else:
+        progress = elapsed_total / accel_secs
+
     multiplier = easing.calculate_multiplier(progress)
 
     return initial_fps + (peak_fps - initial_fps) * multiplier
@@ -32,13 +38,15 @@ class RenderEngine:
         easing: EasingStrategy,
         status_state: dict[str, str],
         status_frames: list[str],
-        status_fps: float
+        status_fps: float,
+        oscillation: bool = False
     ) -> None:
         self.accel_secs = accel_secs
         self.initial_fps = initial_fps
         self.peak_fps = peak_fps
         self.frames = frames
         self.easing = easing
+        self.oscillation = oscillation
         self.status_state = status_state
         self.status_frames = status_frames
         self.status_fps = status_fps
@@ -68,7 +76,8 @@ class RenderEngine:
             self.accel_secs,
             self.initial_fps,
             self.peak_fps,
-            self.easing
+            self.easing,
+            self.oscillation
         )
 
         self.current_frame += current_fps * elapsed_since_last

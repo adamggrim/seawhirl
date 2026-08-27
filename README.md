@@ -85,7 +85,7 @@ from seawhirl import Spinner, Spring
 
 spinner = Spinner(
     easing=Spring(tension=6.0, friction=8.0),
-    oscillate=True
+    oscillation=True
 )
 
 @spinner
