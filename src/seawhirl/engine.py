@@ -1,9 +1,6 @@
 import random
 import shutil
-import sys
-import threading
 import time
-from typing import TextIO
 
 from seawhirl.easing import EasingStrategy
 from seawhirl.utils import COMPLEX_EMOJI_PATTERN, get_visual_width
@@ -98,7 +95,7 @@ class RenderEngine:
             else:
                 console_width = max(10, shutil.get_terminal_size().columns - 1)
 
-            avail_width = console_width - (self.max_frame_width + 1)
+            avail_width = max(0, console_width - (self.max_frame_width + 1))
 
             if get_visual_width(full_text) > avail_width:
                 truncated_text = ''
@@ -138,48 +135,3 @@ class RenderEngine:
             return rendered_frame
 
         return None
-
-
-def run_spinner(
-    stream: TextIO,
-    accel_secs: float,
-    initial_fps: float,
-    peak_fps: float,
-    loop_delay: float,
-    frames: list[str],
-    easing: EasingStrategy,
-    stop_event: threading.Event | None = None,
-    status_state: dict[str, str] | None = None,
-    status_frames: list[str] | None = None,
-    status_fps: float = 2.0
-) -> None:
-    engine = RenderEngine(
-        accel_secs,
-        initial_fps,
-        peak_fps,
-        frames,
-        easing,
-        status_state or {},
-        status_frames or [''],
-        status_fps
-    )
-
-    try:
-        while stop_event is None or not stop_event.is_set():
-            now = time.time()
-            rendered_frame = engine.tick(now)
-
-            if rendered_frame is not None:
-                stream.write(f'\r\033[K{rendered_frame}')
-                stream.flush()
-
-            work_time = time.time() - now
-            time.sleep(max(0.0, loop_delay - work_time))
-    except KeyboardInterrupt:
-        pass
-    except Exception as e:
-        sys.stderr.write(f'\nSpinner worker encountered an error: {e}\n')
-        sys.stderr.flush()
-    finally:
-        stream.write('\r\033[K')
-        stream.flush()
