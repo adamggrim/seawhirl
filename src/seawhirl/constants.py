@@ -5,7 +5,7 @@ class SpinnerDefaults:
     PEAK_ANIMATION_FPS: float = 120.0
     PRESET: str = 'whirl'
     STATUS_FPS: float = 2.0
-    STATUS_FRAMES: list[str] = ['', '.', '..', '...']
+    STATUS_FRAMES: list[str] = []
 
 
 PRESETS: dict[str, list[str]] = {
