@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [project.scripts]
-seawhirl = "seawhirl._cli.runner:main"
+seawhirl = "seawhirl.runner:main"
 
 [project.urls]
 "Source" = "https://github.com/adamggrim/seawhirl"
