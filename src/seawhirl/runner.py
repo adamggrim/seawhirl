@@ -1,4 +1,5 @@
 import argparse
+import shutil
 import sys
 import time
 
@@ -13,138 +14,105 @@ def main() -> None:
         A custom help formatter to align help messages neatly based on
         the maximum argument width.
         """
-        return argparse.RawTextHelpFormatter(prog, max_help_position=79)
+        terminal_width = shutil.get_terminal_size().columns
+        return argparse.RawDescriptionHelpFormatter(
+            prog,
+            max_help_position=24,
+            width=terminal_width
+        )
+
+    command_lines = ['presets:']
+    for name, frames in PRESETS.items():
+        cleaned_frames = [f.strip() for f in frames[:5] if f.strip()]
+        preview_frames = cleaned_frames[:4]
+
+        if len(cleaned_frames) > 4:
+            preview_frames.append('...')
+
+        preview = ', '.join(preview_frames)
+        command_lines.append(f'  {name} ({preview})')
+
+    presets_description = (
+        'Preview seawhirl spinners in the terminal.\n\n' +
+        '\n'.join(command_lines)
+    )
 
     parser = argparse.ArgumentParser(
-        description=(
-            'Run and test seawhirl spinner animations in the terminal.'
+        usage='seawhirl [preset] [options]',
+        description=presets_description,
+        epilog=(
+            'To access advanced physics, use the seawhirl API.'
         ),
         formatter_class=formatter
     )
 
     parser.add_argument(
-        '--mode',
+        'preset',
+        nargs='?',
         choices=list(PRESETS.keys()),
         default='whirl',
-        help=(
-            "Select a built-in frame preset ('whirl', 'dots', 'line', 'arc' "
-            "or 'bounce')"
-        ),
+        help=argparse.SUPPRESS
     )
     parser.add_argument(
         '--custom',
-        type=str,
-        default=None,
-        help=(
-            "Custom frames separated by commas (e.g., '.  ,.. ,...', or "
-            "'🚀,🛸,🛰️')"
-        ),
-    )
-    parser.add_argument(
-        '--duration',
-        type=float,
-        default=5.0,
-        help='Total run time in seconds (default: 5.0)',
+        metavar='<str>',
+        help="custom frames separated by commas ('🚀,🪐,🛸')"
     )
     parser.add_argument(
         '--accel',
         type=float,
         default=3.0,
-        help='Acceleration window in seconds (default: 3.0)',
+        metavar='<secs>',
+        help='acceleration window in seconds'
     )
     parser.add_argument(
-        '--initial-fps',
+        '--duration',
         type=float,
-        default=6.0,
-        help='Starting frames per second (default: 6.0)',
+        default=5.0,
+        metavar='<secs>',
+        help='total run time in seconds'
     )
     parser.add_argument(
-        '--peak-fps',
-        type=float,
-        default=120.0,
-        help='Peak frames per second (default: 120.0)',
-    )
-    parser.add_argument(
-        '--easing',
-        choices=['logarithmic', 'sinusoidal', 'spring', 'inertial'],
+        '--mode',
+        choices=['logarithmic', 'sinusoidal', 'sin', 'spring', 'inertial'],
         default='logarithmic',
-        help=(
-            'Physics easing curve '
-            "('logarithmic', 'sinusoidal', 'spring', 'inertial')"
-        ),
+        metavar='<curve>',
+        help="easing curve ('logarithmic', 'sinusoidal', 'spring', 'inertial')"
     )
     parser.add_argument(
-        '--easing-base',
-        type=float,
-        default=10.0,
-        help='Base for logarithmic easing (default: 10.0)',
-    )
-    parser.add_argument(
-        '--easing-power',
-        type=float,
-        default=5.0,
-        help='Exponent for inertial easing (default: 5.0)',
-    )
-    parser.add_argument(
-        '--easing-tension',
-        type=float,
-        default=5.0,
-        help='Tension factor for spring easing (default: 5.0)',
-    )
-    parser.add_argument(
-        '--easing-friction',
-        type=float,
-        default=10.0,
-        help='Friction factor for spring easing (default: 10.0)',
-    )
-    parser.add_argument(
-        '--status-text',
-        type=str,
+        '--text',
+        dest='status_text',
         default='',
-        help='Initial status text to display next to the spinner',
+        metavar='<str>',
+        help='status text to display next to the spinner'
     )
-    parser.add_argument(
-        '--status-fps',
-        type=float,
-        default=2.0,
-        help='Frames per second for the status text suffix (default: 2.0)',
-    )
-
-    if len(sys.argv) == 1 and sys.stdin.isatty():
-        parser.print_help(sys.stderr)
-        sys.exit(1)
 
     args = parser.parse_args()
 
     if args.custom:
         frames = args.custom.split(',')
     else:
-        frames = PRESETS[args.mode]
+        frames = PRESETS[args.preset]
 
-    if args.easing == 'sinusoidal':
+    if args.easing in {'sinusoidal', 'sin'}:
         easing_strategy = Sinusoidal()
     elif args.easing == 'spring':
-        easing_strategy = Spring(
-            tension=args.easing_tension, friction=args.easing_friction
-        )
+        easing_strategy = Spring()
     elif args.easing == 'inertial':
-        easing_strategy = Inertial(power=args.easing_power)
+        easing_strategy = Inertial()
     else:
-        easing_strategy = Logarithmic(base=args.easing_base)
+        easing_strategy = Logarithmic()
 
     try:
         spinner = Spinner(
             accel_secs=args.accel,
-            initial_fps=args.initial_fps,
-            peak_animation_fps=args.peak_fps,
             frames=frames,
             easing=easing_strategy,
             status_text=args.status_text,
-            status_fps=args.status_fps,
         )
         with spinner:
             time.sleep(args.duration)
-        print('Completed.')
+        print('Spinner finished.')
     except KeyboardInterrupt:
-        print('Stopped.')
+        print('\nSpinner stopped.')
         sys.exit(1)
