@@ -4,6 +4,7 @@ import shutil
 import signal
 import sys
 import threading
+import types
 from collections.abc import Callable
 from enum import Enum
 from functools import wraps
@@ -128,7 +129,7 @@ class Spinner:
             except (OSError, ValueError):
                 pass
 
-    def _on_resize(self, signum: int, frame: Any) -> None:
+    def _on_resize(self, signum: int, frame: types.FrameType | None) -> None:
         self._state['console_width'] = max(
             10, shutil.get_terminal_size().columns - 1
         )
@@ -214,13 +215,13 @@ class Spinner:
     def __call__(self, func: Callable[P, T]) -> Callable[P, T]:
         if inspect.iscoroutinefunction(func):
             @wraps(func)
-            async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> Any:
+            async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
                 async with self:
                     return await func(*args, **kwargs)
             return cast(Callable[P, T], async_wrapper)
 
         @wraps(func)
-        def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> Any:
+        def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             with self:
                 return func(*args, **kwargs)
         return cast(Callable[P, T], sync_wrapper)

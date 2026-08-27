@@ -96,7 +96,7 @@ def enable_windows_vt_processing() -> None:
         kernel32.SetConsoleMode(handle, mode.value | 0x0004)
 
 
-def is_supported_terminal(stream: Any) -> bool:
+def is_supported_terminal(stream: TextIO) -> bool:
     if (
         os.environ.get('CI')
         or os.environ.get('NO_COLOR')
