@@ -1,9 +1,17 @@
 import os
 import platform
 import re
-from typing import Any
+from typing import Any, TextIO
 
 from wcwidth import wcswidth
+
+__all__ = [
+    'COMPLEX_EMOJI_PATTERN',
+    'StreamProxy',
+    'enable_windows_vt_processing',
+    'get_visual_width',
+    'is_supported_terminal',
+]
 
 # Matches Unicode sequences for complex emoji presentation.
 COMPLEX_EMOJI_PATTERN = re.compile(
@@ -49,6 +57,33 @@ COMPLEX_EMOJI_PATTERN = re.compile(
     """,
     re.VERBOSE
 )
+
+
+class StreamProxy:
+    """
+    Class for intercepting `print()` calls to prevent visual tearing.
+    """
+    def __init__(self, original_stream: TextIO) -> None:
+        self._original_stream = original_stream
+        self._is_new_line = True
+
+    def write(self, data: str) -> int:
+        if data == '\n':
+            self._original_stream.write(data)
+            self._is_new_line = True
+        else:
+            if self._is_new_line:
+                self._original_stream.write(f'\r\033[K{data}')
+                self._is_new_line = False
+            else:
+                self._original_stream.write(data)
+        return len(data)
+
+    def flush(self) -> None:
+        self._original_stream.flush()
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._original_stream, name)
 
 
 def enable_windows_vt_processing() -> None:

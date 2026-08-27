@@ -11,7 +11,8 @@ from typing import Any, TextIO, TypeVar, ParamSpec, cast
 
 from seawhirl.utils import (
     is_supported_terminal,
-    enable_windows_vt_processing
+    enable_windows_vt_processing,
+    StreamProxy
 )
 from seawhirl.constants import SpinnerDefaults, PRESETS
 from seawhirl._backends import ThreadBackend, AsyncBackend
@@ -27,33 +28,6 @@ __all__ = ['Spinner', 'Backend']
 
 P = ParamSpec('P')
 T = TypeVar('T')
-
-
-class _StreamProxy:
-    """
-    Class for intercepting `print()` calls to prevent visual tearing.
-    """
-    def __init__(self, original_stream: TextIO) -> None:
-        self._original_stream = original_stream
-        self._is_new_line = True
-
-    def write(self, data: str) -> int:
-        if data == '\n':
-            self._original_stream.write(data)
-            self._is_new_line = True
-        else:
-            if self._is_new_line:
-                self._original_stream.write(f'\r\033[K{data}')
-                self._is_new_line = False
-            else:
-                self._original_stream.write(data)
-        return len(data)
-
-    def flush(self) -> None:
-        self._original_stream.flush()
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._original_stream, name)
 
 
 class Spinner:
@@ -136,7 +110,7 @@ class Spinner:
     def _apply_stdout_proxy(self) -> None:
         if self.stream == sys.stdout:
             self._original_stdout = sys.stdout
-            sys.stdout = cast(TextIO, _StreamProxy(sys.stdout))
+            sys.stdout = cast(TextIO, StreamProxy(sys.stdout))
 
     def _show_cursor(self) -> None:
         if not self._disabled:
