@@ -17,7 +17,7 @@ python -m seawhirl
 
 Try built-in presets (`whirl`, `arc`, `blink`, `bounce`, `dots`, `line`):
 ```bash
-python -m seawhirl --mode dots --duration 10
+python -m seawhirl dots --duration 10
 ```
 
 Animate custom frames:
