@@ -16,3 +16,9 @@ PRESETS: dict[str, list[str]] = {
     'dots': ['.  ', '.. ', '...', '   '],
     'line': ['-', '\\', '|', '/']
 }
+
+ANSI_HIDE_CURSOR = '\033[?25l'
+ANSI_SHOW_CURSOR = '\033[?25h'
+ANSI_CLEAR_LINE = '\033[K'
+ANSI_CARRIAGE_RETURN = '\r'
+ANSI_MOVE_COLUMN = '\033[{col}G'

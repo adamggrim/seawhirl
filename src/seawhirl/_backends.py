@@ -3,8 +3,9 @@ import sys
 import threading
 import time
 from abc import ABC, abstractmethod
-from typing import Any, TextIO
+from typing import TextIO
 
+from seawhirl.constants import ANSI_CARRIAGE_RETURN, ANSI_CLEAR_LINE
 from seawhirl.easing import EasingStrategy
 from seawhirl.engine import RenderEngine
 
@@ -70,12 +71,20 @@ class ThreadBackend(SpinnerBackend):
         easing: EasingStrategy,
         status_state: dict[str, str],
         status_frames: list[str],
-        status_fps: float
+        status_fps: float,
+        oscillation: bool
     ) -> None:
         super().__init__(
-            stream, accel_secs, initial_fps, peak_animation_fps,
-            loop_delay, frames, easing, status_state,
-            status_frames, status_fps
+            stream,
+            accel_secs,
+            initial_fps,
+            peak_animation_fps,
+            loop_delay,
+            frames, easing,
+            status_state,
+            status_frames,
+            status_fps,
+            oscillation
         )
         self._thread: threading.Thread | None = None
         self._stop_event = threading.Event()
@@ -99,7 +108,10 @@ class ThreadBackend(SpinnerBackend):
                 rendered_frame = engine.tick(now)
 
                 if rendered_frame is not None:
-                    self.stream.write(f'\r\033[K{rendered_frame}')
+                    self.stream.write(
+                        f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}'
+                        f'{rendered_frame}'
+                    )
                     self.stream.flush()
 
                 work_time = time.time() - now
@@ -110,7 +122,7 @@ class ThreadBackend(SpinnerBackend):
             sys.stderr.write(f'\nSpinner worker encountered an error: {e}\n')
             sys.stderr.flush()
         finally:
-            self.stream.write('\r\033[K')
+            self.stream.write(f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}')
             self.stream.flush()
 
     def start(self) -> None:
@@ -147,7 +159,7 @@ class AsyncBackend(SpinnerBackend):
             loop_delay, frames, easing, status_state,
             status_frames, status_fps
         )
-        self._async_task: asyncio.Task | None = None
+        self._async_task: asyncio.Task[None] | None = None
 
     def start(self) -> None:
         raise RuntimeError(
@@ -177,7 +189,10 @@ class AsyncBackend(SpinnerBackend):
                 rendered_frame = engine.tick(now)
 
                 if rendered_frame is not None:
-                    self.stream.write(f'\r\033[K{rendered_frame}')
+                    self.stream.write(
+                        f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}'
+                        f'{rendered_frame}'
+                    )
                     self.stream.flush()
 
                 work_time = time.time() - now
@@ -185,7 +200,7 @@ class AsyncBackend(SpinnerBackend):
         except asyncio.CancelledError:
             pass
         finally:
-            self.stream.write('\r\033[K')
+            self.stream.write(f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}')
             self.stream.flush()
 
     async def astart(self) -> None:
