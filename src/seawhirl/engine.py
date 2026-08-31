@@ -1,9 +1,11 @@
 import random
+import regex
 import shutil
 import time
 
+from seawhirl.constants import ANSI_MOVE_COLUMN
 from seawhirl.easing import EasingStrategy
-from seawhirl.utils import COMPLEX_EMOJI_PATTERN, get_visual_width
+from seawhirl.utils import get_visual_width
 
 
 def _calculate_current_fps(
@@ -99,33 +101,19 @@ class RenderEngine:
         if text:
             full_text = f'{text}{suffix}'
 
-            if 'console_width' in self.status_state:
-                console_width = self.status_state['console_width']
-            else:
-                console_width = max(10, shutil.get_terminal_size().columns - 1)
+            console_width = max(10, shutil.get_terminal_size().columns - 1)
+            available_width = max(0, console_width - (self.max_frame_width + 1))
 
-            avail_width = max(0, console_width - (self.max_frame_width + 1))
-
-            if get_visual_width(full_text) > avail_width:
+            if get_visual_width(full_text) > available_width:
                 truncated_text = ''
                 curr_w = 0
 
-                tokens = [
-                    t for t in COMPLEX_EMOJI_PATTERN.split(full_text) if t
-                ]
-
-                # Complex emojis stay grouped, with other text split
-                # into chararacters.
-                graphemes = []
-                for token in tokens:
-                    if COMPLEX_EMOJI_PATTERN.fullmatch(token):
-                        graphemes.append(token)
-                    else:
-                        graphemes.extend(list(token))
+                # Ensure complex emojis are never sliced in half.
+                graphemes = regex.findall(r'\X', full_text)
 
                 for cluster in graphemes:
                     cluster_w = get_visual_width(cluster)
-                    if curr_w + cluster_w > avail_width - 1:
+                    if curr_w + cluster_w > available_width - 1:
                         truncated_text += '…'
                         break
                     truncated_text += cluster
@@ -134,7 +122,9 @@ class RenderEngine:
                 full_text = truncated_text
 
             rendered_frame = (
-                f'{icon}\033[{self.max_frame_width + 2}G{full_text}'
+                f'{icon}'
+                f'{ANSI_MOVE_COLUMN.format(col=self.max_frame_width + 2)}'
+                f'{full_text}'
             )
         else:
             rendered_frame = icon
