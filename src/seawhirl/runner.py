@@ -73,7 +73,7 @@ def main() -> None:
         help='total run time in seconds'
     )
     parser.add_argument(
-        '--mode',
+        '--easing',
         choices=['logarithmic', 'sinusoidal', 'sin', 'spring', 'inertial'],
         default='logarithmic',
         metavar='<curve>',
@@ -91,8 +91,6 @@ def main() -> None:
         action='store_true',
         help='pulse the animation speed back and forth'
     )
-
-    args = parser.parse_args()
 
     args = parser.parse_args()
 
@@ -122,5 +120,5 @@ def main() -> None:
             time.sleep(args.duration)
         print('Spinner finished.')
     except KeyboardInterrupt:
-        print('\nSpinner stopped.')
+        print('\nSpinner terminated.')
         sys.exit(1)
