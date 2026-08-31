@@ -1,21 +1,23 @@
 import atexit
 import inspect
-import shutil
-import signal
 import sys
-import threading
 import types
 from collections.abc import Callable
 from enum import Enum
 from functools import wraps
-from typing import Any, TextIO, TypeVar, ParamSpec, cast
+from typing import TextIO, TypeVar, ParamSpec, cast
 
 from seawhirl.utils import (
+    StreamProxy,
     is_supported_terminal,
-    enable_windows_vt_processing,
-    StreamProxy
+    enable_windows_vt_processing
 )
-from seawhirl.constants import SpinnerDefaults, PRESETS
+from seawhirl.constants import (
+    ANSI_SHOW_CURSOR,
+    ANSI_HIDE_CURSOR,
+    SpinnerDefaults,
+    PRESETS
+)
 from seawhirl._backends import ThreadBackend, AsyncBackend
 from seawhirl.easing import EasingStrategy, Logarithmic
 
@@ -69,18 +71,15 @@ class Spinner:
 
         self._state = {
             'status_text': status_text,
-            'console_width': max(
-                10, shutil.get_terminal_size().columns - 1
-            )
         }
-        self._old_sigwinch = None
+        self._original_stdout: TextIO | None = None
+
         self.status_frames = (
             status_frames
             if status_frames is not None
             else SpinnerDefaults.STATUS_FRAMES
         )
         self.status_fps = status_fps
-        self._original_stdout: TextIO | None = None
 
         if self.backend == Backend.THREAD:
             self._worker = ThreadBackend(
@@ -116,10 +115,15 @@ class Spinner:
             self._original_stdout = sys.stdout
             sys.stdout = cast(TextIO, StreamProxy(sys.stdout))
 
+    def _restore_stdout_proxy(self) -> None:
+        if self._original_stdout is not None:
+            sys.stdout = self._original_stdout
+            self._original_stdout = None
+
     def _show_cursor(self) -> None:
         if not self._disabled:
             try:
-                self.stream.write('\033[?25h')
+                self.stream.write(ANSI_SHOW_CURSOR)
                 self.stream.flush()
             except (OSError, ValueError):
                 pass
@@ -127,45 +131,10 @@ class Spinner:
     def _hide_cursor(self) -> None:
         if not self._disabled:
             try:
-                self.stream.write('\033[?25l')
+                self.stream.write(ANSI_HIDE_CURSOR)
                 self.stream.flush()
             except (OSError, ValueError):
                 pass
-
-    def _on_resize(self, signum: int, frame: types.FrameType | None) -> None:
-        self._state['console_width'] = max(
-            10, shutil.get_terminal_size().columns - 1
-        )
-        if callable(self._old_sigwinch):
-            self._old_sigwinch(signum, frame)
-
-    def _register_resize_handler(self) -> None:
-        self._old_sigwinch = None
-        if (
-            hasattr(signal, 'SIGWINCH')
-            and threading.current_thread() is threading.main_thread()
-        ):
-            try:
-                self._old_sigwinch = signal.getsignal(signal.SIGWINCH)
-                signal.signal(signal.SIGWINCH, self._on_resize)
-            except (ValueError, OSError):
-                pass
-
-    def _restore_resize_handler(self) -> None:
-        if (
-            hasattr(signal, 'SIGWINCH')
-            and threading.current_thread() is threading.main_thread()
-        ):
-            try:
-                if self._old_sigwinch is not None:
-                    signal.signal(signal.SIGWINCH, self._old_sigwinch)
-            except (ValueError, OSError):
-                pass
-
-    def _restore_stdout_proxy(self) -> None:
-        if self._original_stdout is not None:
-            sys.stdout = self._original_stdout
-            self._original_stdout = None
 
     def start(self) -> None:
         if self._disabled:
@@ -173,17 +142,17 @@ class Spinner:
         self._hide_cursor()
         atexit.register(self._show_cursor)
         self._apply_stdout_proxy()
-        self._register_resize_handler()
         self._worker.start()
 
     def stop(self) -> None:
         if self._disabled:
             return
-        self._worker.stop()
-        self._restore_resize_handler()
-        self._restore_stdout_proxy()
-        self._show_cursor()
-        atexit.unregister(self._show_cursor)
+        try:
+            self._worker.stop()
+        finally:
+            self._restore_stdout_proxy()
+            self._show_cursor()
+            atexit.unregister(self._show_cursor)
 
     def update(self, status_text: str) -> None:
         """
@@ -196,23 +165,33 @@ class Spinner:
             self._hide_cursor()
             atexit.register(self._show_cursor)
             self._apply_stdout_proxy()
-            self._register_resize_handler()
             await self._worker.astart()
         return self
 
-    async def __aexit__(self, *_):
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: types.TracebackType | None
+    ) -> None:
         if not self._disabled:
-            await self._worker.astop()
-            self._restore_resize_handler()
-            self._restore_stdout_proxy()
-            self._show_cursor()
-            atexit.unregister(self._show_cursor)
+            try:
+                await self._worker.astop()
+            finally:
+                self._restore_stdout_proxy()
+                self._show_cursor()
+                atexit.unregister(self._show_cursor)
 
     def __enter__(self):
         self.start()
         return self
 
-    def __exit__(self, *_):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: types.TracebackType | None
+    ) -> None:
         self.stop()
 
     def __call__(self, func: Callable[P, T]) -> Callable[P, T]:
