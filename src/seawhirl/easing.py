@@ -8,7 +8,7 @@ class EasingStrategy(Protocol):
         ...
 
 
-@dataclass
+@dataclass(slots=True)
 class Logarithmic:
     base: float = 10.0
 
@@ -17,13 +17,13 @@ class Logarithmic:
         return math.log(1 + (safe_base - 1) * progress, safe_base)
 
 
-@dataclass
+@dataclass(slots=True)
 class Sinusoidal:
     def calculate_multiplier(self, progress: float) -> float:
         return 0.5 * (1 - math.cos(math.pi * progress))
 
 
-@dataclass
+@dataclass(slots=True)
 class Spring:
     tension: float = 5.0
     friction: float = 10.0
@@ -34,7 +34,7 @@ class Spring:
         return 1 - (decay * oscillation)
 
 
-@dataclass
+@dataclass(slots=True)
 class Inertial:
     power: float = 5.0
 
