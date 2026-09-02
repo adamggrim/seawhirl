@@ -34,15 +34,23 @@ Use `python -m seawhirl --help` to see all available configuration flags.
 
 ```text
 seawhirl/
+  ├── _cli/
+  │   └── cli.py: Command-line argument parsing
+  ├── _core/
+  │   ├── data/
+  │   │   └── presets.json: Default spinner animation frames
+  │   ├── backends.py: Threading and asyncio backends for rendering
+  │   ├── easing.py: Mathematical easing curves and physics
+  │   ├── engine.py: The core rendering engine for the spinner
+  │   ├── exceptions.py: Custom exceptions for the seawhirl package
+  │   ├── presets.py: Preset configurations loaded from JSON
+  │   ├── terminal.py: Terminal interaction and cursor manipulation utilities
+  │   └── utils.py: Utility functions for the package
+  ├── _lib/
+  │   └── spinner.py: The main `Spinner` class, context manager and decorator
   ├── __init__.py: Exposes the public API
   ├── __main__.py: The entry point for the package
-  ├── _backends.py: Threading and asyncio rendering backends
-  ├── constants.py: Default configurations and presets
-  ├── easing.py: Mathematical easing curves and physics
-  ├── engine.py: The core rendering engine
-  ├── runner.py: Command-line argument parser and execution logic
-  ├── spinner.py: The main Spinner class, context manager and decorator
-  └── utils.py: Utlity functions for the package
+  └── py.typed: Marker file for PEP 561 typing support
 ```
 </details>
 
