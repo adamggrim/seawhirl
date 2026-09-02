@@ -103,6 +103,7 @@ class ThreadBackend(SpinnerBackend):
         )
 
         try:
+            next_tick = time.time()
             while not self._stop_event.is_set():
                 now = time.time()
                 rendered_frame = engine.tick(now)
@@ -114,8 +115,8 @@ class ThreadBackend(SpinnerBackend):
                     )
                     self.stream.flush()
 
-                work_time = time.time() - now
-                time.sleep(max(0.0, self.loop_delay - work_time))
+                next_tick += self.loop_delay
+                time.sleep(max(0.0, next_tick - time.time()))
         except KeyboardInterrupt:
             pass
         except Exception as e:
