@@ -7,17 +7,14 @@ from enum import Enum
 from functools import wraps
 from typing import TextIO, TypeVar, ParamSpec, cast
 
-from seawhirl.utils import (
+from seawhirl.terminal import (
     StreamProxy,
     is_supported_terminal,
-    enable_windows_vt_processing
-)
-from seawhirl.constants import (
+    enable_windows_vt_processing,
     ANSI_SHOW_CURSOR,
-    ANSI_HIDE_CURSOR,
-    SpinnerDefaults,
-    PRESETS
+    ANSI_HIDE_CURSOR
 )
+from seawhirl.presets import PRESETS
 from seawhirl._backends import ThreadBackend, AsyncBackend
 from seawhirl.easing import EasingStrategy, Logarithmic
 
@@ -175,34 +172,34 @@ class Spinner:
             self._hide_cursor()
             atexit.register(self._show_cursor)
             self._apply_stdout_proxy()
-            await self._worker.astart()
+            await self._worker.__aenter__()
         return self
 
-    async def __aexit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: types.TracebackType | None
-    ) -> None:
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         if not self._disabled:
             try:
-                await self._worker.astop()
+                await self._worker.__aexit__(exc_type, exc_val, exc_tb)
             finally:
                 self._restore_stdout_proxy()
                 self._show_cursor()
                 atexit.unregister(self._show_cursor)
 
     def __enter__(self):
-        self.start()
+        if not self._disabled:
+            self._hide_cursor()
+            atexit.register(self._show_cursor)
+            self._apply_stdout_proxy()
+            self._worker.__enter__()
         return self
 
-    def __exit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: types.TracebackType | None
-    ) -> None:
-        self.stop()
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        if not self._disabled:
+            try:
+                self._worker.__exit__(exc_type, exc_val, exc_tb)
+            finally:
+                self._restore_stdout_proxy()
+                self._show_cursor()
+                atexit.unregister(self._show_cursor)
 
     def __call__(self, func: Callable[P, T]) -> Callable[P, T]:
         if inspect.iscoroutinefunction(func):

@@ -1,13 +1,14 @@
 import asyncio
-import sys
-import threading
+import logging
 import time
+import types
 from abc import ABC, abstractmethod
 from typing import TextIO
 
-from seawhirl.constants import ANSI_CARRIAGE_RETURN, ANSI_CLEAR_LINE
 from seawhirl.easing import EasingStrategy
 from seawhirl.engine import RenderEngine
+
+from seawhirl.terminal import ANSI_CARRIAGE_RETURN, ANSI_CLEAR_LINE
 
 
 class SpinnerBackend(ABC):
@@ -57,6 +58,30 @@ class SpinnerBackend(ABC):
         Stop the asynchronous rendering loop. Defaults to sync stop.
         """
         self.stop()
+
+    def __enter__(self) -> 'SpinnerBackend':
+        self.start()
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: types.TracebackType | None
+    ) -> None:
+        self.stop()
+
+    async def __aenter__(self) -> 'SpinnerBackend':
+        await self.astart()
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: types.TracebackType | None
+    ) -> None:
+        await self.astop()
 
 
 class ThreadBackend(SpinnerBackend):
