@@ -4,12 +4,14 @@ from dataclasses import dataclass
 
 
 class EasingStrategy(Protocol):
+    """Protocol for calculating custom easing curves."""
     def calculate_multiplier(self, progress: float) -> float:
         ...
 
 
 @dataclass(slots=True)
 class Logarithmic:
+    """Logarithmic curve for immediate acceleration."""
     base: float = 10.0
 
     def calculate_multiplier(self, progress: float) -> float:
@@ -19,12 +21,14 @@ class Logarithmic:
 
 @dataclass(slots=True)
 class Sinusoidal:
+    """Sinusoidal curve for oscillating acceleration."""
     def calculate_multiplier(self, progress: float) -> float:
         return 0.5 * (1 - math.cos(math.pi * progress))
 
 
 @dataclass(slots=True)
 class Spring:
+    """Spring-based curve with tension and friction."""
     tension: float = 5.0
     friction: float = 10.0
 
@@ -36,6 +40,7 @@ class Spring:
 
 @dataclass(slots=True)
 class Inertial:
+    """Inertial curve with a power function."""
     power: float = 5.0
 
     def calculate_multiplier(self, progress: float) -> float:
