@@ -245,7 +245,7 @@ class AsyncBackend(SpinnerBackend):
                 work_time = time.time() - now
                 await asyncio.sleep(max(0.0, self.loop_delay - work_time))
         except asyncio.CancelledError:
-            pass
+            raise
         finally:
             self.stream.write(f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}')
             self.stream.flush()
