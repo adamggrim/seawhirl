@@ -3,9 +3,9 @@ import shutil
 import sys
 import time
 
-from seawhirl.constants import PRESETS
-from seawhirl.spinner import Spinner
 from seawhirl.easing import Logarithmic, Sinusoidal, Spring, Inertial
+from seawhirl.presets import PRESETS
+from seawhirl.spinner import Spinner
 
 
 def main() -> None:
