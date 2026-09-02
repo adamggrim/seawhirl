@@ -1,22 +1,22 @@
 import atexit
 import inspect
 import sys
-import types
 from collections.abc import Callable
 from enum import Enum
 from functools import wraps
 from typing import TextIO, TypeVar, ParamSpec, cast
 
-from seawhirl.terminal import (
+from seawhirl._core.terminal import (
     StreamProxy,
     is_supported_terminal,
     enable_windows_vt_processing,
     ANSI_SHOW_CURSOR,
     ANSI_HIDE_CURSOR
 )
-from seawhirl.presets import PRESETS
-from seawhirl._backends import ThreadBackend, AsyncBackend
-from seawhirl.easing import EasingStrategy, Logarithmic
+from seawhirl._core.presets import PRESETS
+from seawhirl._core.backends import ThreadBackend, AsyncBackend
+from seawhirl._core.easing import EasingStrategy, Logarithmic
+from seawhirl._core.exceptions import InvalidPresetError
 
 
 class Backend(Enum):
@@ -60,7 +60,7 @@ class Spinner:
 
         if isinstance(frames, str):
             if frames not in PRESETS:
-                raise ValueError(
+                raise InvalidPresetError(
                     f"Unknown preset: '{frames}'. "
                     f'Available presets: {list(PRESETS.keys())}'
                 )

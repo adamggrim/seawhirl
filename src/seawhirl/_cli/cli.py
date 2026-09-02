@@ -3,9 +3,9 @@ import shutil
 import sys
 import time
 
-from seawhirl.easing import Logarithmic, Sinusoidal, Spring, Inertial
-from seawhirl.presets import PRESETS
-from seawhirl.spinner import Spinner
+from seawhirl._core.easing import Logarithmic, Sinusoidal, Spring, Inertial
+from seawhirl._core.presets import PRESETS
+from seawhirl._lib.spinner import Spinner
 
 EASING_MAP: dict[str, type] = {
     'sinusoidal': Sinusoidal,

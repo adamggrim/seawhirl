@@ -3,9 +3,9 @@ import regex
 import shutil
 import time
 
-from seawhirl.easing import EasingStrategy
-from seawhirl.terminal import ANSI_MOVE_COLUMN
-from seawhirl.utils import get_visual_width
+from seawhirl._core.easing import EasingStrategy
+from seawhirl._core.terminal import ANSI_MOVE_COLUMN
+from seawhirl._core.utils import get_visual_width
 
 
 def _calculate_current_fps(

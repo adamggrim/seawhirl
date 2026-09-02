@@ -1,12 +1,14 @@
-from seawhirl.easing import (
+"""A Python package for accelerating CLI spinners."""
+
+from seawhirl._core.easing import (
     EasingStrategy,
     Logarithmic,
     Sinusoidal,
     Spring,
     Inertial
 )
-from seawhirl.presets import PRESETS
-from seawhirl.spinner import Spinner, Backend
+from seawhirl._core.presets import PRESETS
+from seawhirl._lib.spinner import Spinner, Backend
 
 __all__ = [
     'Backend',

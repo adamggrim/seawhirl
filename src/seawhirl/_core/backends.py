@@ -1,14 +1,15 @@
 import asyncio
-import logging
 import time
 import types
+import threading
+import sys
 from abc import ABC, abstractmethod
 from typing import TextIO
 
-from seawhirl.easing import EasingStrategy
-from seawhirl.engine import RenderEngine
-
-from seawhirl.terminal import ANSI_CARRIAGE_RETURN, ANSI_CLEAR_LINE
+from seawhirl._core.easing import EasingStrategy
+from seawhirl._core.engine import RenderEngine
+from seawhirl._core.terminal import ANSI_CARRIAGE_RETURN, ANSI_CLEAR_LINE
+from seawhirl._core.exceptions import BackendStartupError
 
 
 class SpinnerBackend(ABC):
@@ -188,7 +189,7 @@ class AsyncBackend(SpinnerBackend):
         self._async_task: asyncio.Task[None] | None = None
 
     def start(self) -> None:
-        raise RuntimeError(
+        raise BackendStartupError(
             "`AsyncBackend` cannot start synchronously. Please use 'async "
             "with' or decorate an async function."
         )

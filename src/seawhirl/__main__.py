@@ -1,4 +1,4 @@
-from seawhirl.cli import main
+from seawhirl._cli.cli import main
 
 if __name__ == '__main__':
     main()
