@@ -13,6 +13,10 @@ from seawhirl._core.exceptions import BackendStartupError
 
 
 class SpinnerBackend(ABC):
+    """
+    Abstract base class defining the contract for continuous rendering
+    execution strategies.
+    """
     def __init__(
         self, stream: TextIO,
         accel_secs: float,
@@ -86,6 +90,11 @@ class SpinnerBackend(ABC):
 
 
 class ThreadBackend(SpinnerBackend):
+    """
+    Implementation that delegates rendering to a daemonized background
+    thread. Standard print statements must be intercepted to prevent
+    terminal tearing.
+    """
     def __init__(
         self,
         stream: TextIO,
@@ -116,6 +125,7 @@ class ThreadBackend(SpinnerBackend):
         self._stop_event = threading.Event()
 
     def _sync_render_loop(self) -> None:
+        """Internal synchronous polling loop mapping Engine state to IO."""
         engine = RenderEngine(
             self.accel_secs,
             self.initial_fps,
@@ -153,6 +163,7 @@ class ThreadBackend(SpinnerBackend):
             self.stream.flush()
 
     def start(self) -> None:
+        """Initialize the thread loop safely."""
         self._stop_event.clear()
         self._thread = threading.Thread(
             target=self._sync_render_loop,
@@ -161,6 +172,7 @@ class ThreadBackend(SpinnerBackend):
         self._thread.start()
 
     def stop(self) -> None:
+        """Issue shutdown signals to the running thread and join."""
         if self._thread is not None:
             self._stop_event.set()
             self._thread.join()
@@ -168,6 +180,11 @@ class ThreadBackend(SpinnerBackend):
 
 
 class AsyncBackend(SpinnerBackend):
+    """
+    Implementation that delegates rendering to the active asyncio event
+    loop. Permits smooth integration into existing coroutines without
+    thread management overhead.
+    """
     def __init__(
         self,
         stream: TextIO,
@@ -189,15 +206,18 @@ class AsyncBackend(SpinnerBackend):
         self._async_task: asyncio.Task[None] | None = None
 
     def start(self) -> None:
+        """Block illegal synchronous invocations."""
         raise BackendStartupError(
             "`AsyncBackend` cannot start synchronously. Please use 'async "
             "with' or decorate an async function."
         )
 
     def stop(self) -> None:
+        """No-op for synchronous exit to accommodate strict typing."""
         pass
 
     async def _async_render_loop(self) -> None:
+        """Internal asynchronous polling loop mapping Engine state to IO."""
         engine = RenderEngine(
             self.accel_secs,
             self.initial_fps,
@@ -231,9 +251,11 @@ class AsyncBackend(SpinnerBackend):
             self.stream.flush()
 
     async def astart(self) -> None:
+        """Schedule the worker coroutine in the active event loop."""
         self._async_task = asyncio.create_task(self._async_render_loop())
 
     async def astop(self) -> None:
+        """Cancel the scheduled execution trace."""
         if self._async_task:
             self._async_task.cancel()
             try:
