@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 [project.scripts]
-seawhirl = "seawhirl.runner:main"
+seawhirl = "seawhirl._cli.cli:main"
 
 [project.urls]
 "Source" = "https://github.com/adamggrim/seawhirl"
@@ -28,7 +28,7 @@ seawhirl = "seawhirl.runner:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-seawhirl = ["py.typed"]
+seawhirl = ["py.typed", "_core/data/*.json"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
