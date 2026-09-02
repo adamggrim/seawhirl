@@ -134,43 +134,50 @@ class RenderEngine:
         )
 
         icon = self.frames[current_frame_idx]
-        text = self.status_state.get('status_text', '')
-        suffix = (
-            self.status_frames[status_frame_idx]
-            if text and self.status_frames
-            else ''
+        console_width = max(
+            1, shutil.get_terminal_size(fallback=(80, 24)).columns - 1
         )
 
-        if text:
-            full_text = f'{text}{suffix}'
-
-            console_width = max(10, shutil.get_terminal_size().columns - 1)
-            available_width = max(0, console_width - (self.max_frame_width + 1))
-
-            if get_visual_width(full_text) > available_width:
-                truncated_text = ''
-                curr_w = 0
-
-                # Ensure complex emojis are never sliced in half.
-                graphemes = regex.findall(r'\X', full_text)
-
-                for cluster in graphemes:
-                    cluster_w = get_visual_width(cluster)
-                    if curr_w + cluster_w > available_width - 1:
-                        truncated_text += '…'
-                        break
-                    truncated_text += cluster
-                    curr_w += cluster_w
-
-                full_text = truncated_text
-
-            rendered_frame = (
-                f'{icon}'
-                f'{ANSI_MOVE_COLUMN.format(col=self.max_frame_width + 2)}'
-                f'{full_text}'
-            )
+        if get_visual_width(icon) > console_width:
+            rendered_frame = ''
         else:
-            rendered_frame = icon
+            text = self.status_state.get('status_text', '')
+            suffix = (
+                self.status_frames[status_frame_idx]
+                if text and self.status_frames
+                else ''
+            )
+
+            if text:
+                full_text = f'{text}{suffix}'
+                available_width = max(
+                    0, console_width - (self.max_frame_width + 1)
+                )
+
+                if get_visual_width(full_text) > available_width:
+                    truncated_text = ''
+                    curr_w = 0
+
+                    # Ensure complex emojis are never sliced in half.
+                    graphemes = regex.findall(r'\X', full_text)
+
+                    for cluster in graphemes:
+                        cluster_w = get_visual_width(cluster)
+                        if curr_w + cluster_w > available_width - 1:
+                            truncated_text += '…'
+                            break
+                        truncated_text += cluster
+                        curr_w += cluster_w
+
+                    full_text = truncated_text
+
+                rendered_frame = (
+                    f'{icon}'
+                    f'{ANSI_MOVE_COLUMN.format(col=self.max_frame_width + 2)}'
+                    f'{full_text}'
+                )
+            else:
+                rendered_frame = icon
 
         if rendered_frame != self.prev_rendered_frame:
             self.prev_rendered_frame = rendered_frame
