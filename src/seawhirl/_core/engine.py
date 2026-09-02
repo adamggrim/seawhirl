@@ -16,6 +16,21 @@ def _calculate_current_fps(
     easing: EasingStrategy,
     oscillation: bool = False
 ) -> float:
+    """
+    Determine the current frames per second based on the easing
+    strategy.
+
+    Args:
+        elapsed_total: The time elapsed since rendering started.
+        accel_secs: The seconds to reach the maximum frames per second.
+        initial_fps: The starting frames per second.
+        peak_fps: The maximum frames per second.
+        easing: The easing model for the animation.
+        oscillation: Whether to oscillate speed.
+
+    Returns:
+        float: The calculated frames per second for this tick.
+    """
     if not oscillation and elapsed_total >= accel_secs:
         return peak_fps
 
@@ -31,6 +46,9 @@ def _calculate_current_fps(
 
 
 class RenderEngine:
+    """
+    Manages spinner animation rendering.
+    """
     def __init__(
         self,
         accel_secs: float,
@@ -43,6 +61,21 @@ class RenderEngine:
         status_fps: float,
         oscillation: bool = False
     ) -> None:
+        """
+        Initialize the render engine with physics properties and frames.
+
+        Args:
+            accel_secs: The seconds to reach the maximum frames per
+                second.
+            initial_fps: The starting frames per second.
+            peak_fps: The maximum frames per second.
+            frames: A sequence of strings representing animation frames.
+            easing: The easing model for the animation.
+            status_state: A mutable dictionary for status text.
+            status_frames: Frames attached to the end of status text.
+            status_fps: Frames per second for the status text animation.
+            oscillation: Whether to oscillate speed.
+        """
         self.accel_secs = accel_secs
         self.initial_fps = initial_fps
         self.peak_fps = peak_fps
@@ -69,6 +102,16 @@ class RenderEngine:
         self.prev_update_time = self.start_time
 
     def tick(self, now: float) -> str | None:
+        """
+        Animate based on elapsed time.
+
+        Args:
+            now: The current timestamp in seconds.
+
+        Returns:
+            str | None: An ANSI-formatted string representing the
+                current text, or `None` if the output is unchanged.
+        """
         elapsed_total = now - self.start_time
         elapsed_since_last = now - self.prev_update_time
         self.prev_update_time = now
