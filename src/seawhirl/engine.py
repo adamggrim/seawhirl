@@ -3,8 +3,8 @@ import regex
 import shutil
 import time
 
-from seawhirl.constants import ANSI_MOVE_COLUMN
 from seawhirl.easing import EasingStrategy
+from seawhirl.terminal import ANSI_MOVE_COLUMN
 from seawhirl.utils import get_visual_width
 
 
