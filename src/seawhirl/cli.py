@@ -7,6 +7,16 @@ from seawhirl.easing import Logarithmic, Sinusoidal, Spring, Inertial
 from seawhirl.presets import PRESETS
 from seawhirl.spinner import Spinner
 
+EASING_MAP: dict[str, type] = {
+    'sinusoidal': Sinusoidal,
+    'sin': Sinusoidal,
+    'sine': Sinusoidal,
+    'spring': Spring,
+    'inertial': Inertial,
+    'logarithmic': Logarithmic,
+    'log': Logarithmic
+}
+
 
 def main() -> None:
     def formatter(prog: str) -> argparse.HelpFormatter:
@@ -74,7 +84,15 @@ def main() -> None:
     )
     parser.add_argument(
         '--easing',
-        choices=['logarithmic', 'sinusoidal', 'sin', 'spring', 'inertial'],
+        choices=[
+            'logarithmic',
+            'log',
+            'sinusoidal',
+            'sin',
+            'sine',
+            'spring',
+            'inertial'
+        ],
         default='logarithmic',
         metavar='<curve>',
         help="easing curve ('logarithmic', 'sinusoidal', 'spring', 'inertial')"
@@ -99,14 +117,7 @@ def main() -> None:
     else:
         frames = PRESETS[args.preset]
 
-    if args.easing in {'sinusoidal', 'sin'}:
-        easing_strategy = Sinusoidal()
-    elif args.easing == 'spring':
-        easing_strategy = Spring()
-    elif args.easing == 'inertial':
-        easing_strategy = Inertial()
-    else:
-        easing_strategy = Logarithmic()
+    easing_strategy = EASING_MAP[args.easing]()
 
     try:
         spinner = Spinner(
