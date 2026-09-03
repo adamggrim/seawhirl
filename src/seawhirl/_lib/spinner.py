@@ -1,10 +1,16 @@
+"""Main spinner interface and configuration defaults."""
+
 import atexit
 import inspect
+import os
+import signal
 import sys
+import threading
+import types
 from collections.abc import Callable
 from enum import Enum
 from functools import wraps
-from typing import TextIO, TypeVar, ParamSpec, cast
+from typing import Any, TextIO, TypeVar, ParamSpec, cast
 
 from seawhirl._core.terminal import (
     StreamProxy,
@@ -14,17 +20,23 @@ from seawhirl._core.terminal import (
     ANSI_HIDE_CURSOR
 )
 from seawhirl._core.presets import PRESETS
-from seawhirl._core.backends import ThreadBackend, AsyncBackend
+from seawhirl._core.backends import (
+    ThreadBackend,
+    AsyncBackend,
+    SpinnerBackend
+)
 from seawhirl._core.easing import EasingStrategy, Logarithmic
 from seawhirl._core.exceptions import InvalidPresetError
 
 
 class Backend(Enum):
+    """Execution modes for background rendering."""
     THREAD = 'thread'
     ASYNC = 'async'
 
 
 class SpinnerDefaults:
+    """Fallback physics and framing configuration constants."""
     ACCEL_SECS: float = 3.0
     INITIAL_FPS: float = 6.0
     MAX_RENDER_FPS: float = 60.0
@@ -41,6 +53,11 @@ T = TypeVar('T')
 
 
 class Spinner:
+    """
+    Entry point for creating terminal spinners.
+
+    Acts as a decorator, context manager or manual controller.
+    """
     def __init__(
         self,
         accel_secs: float = SpinnerDefaults.ACCEL_SECS,
@@ -80,6 +97,7 @@ class Spinner:
             'status_text': status_text,
         }
         self._original_stdout: TextIO | None = None
+        self._old_signal_handlers: dict[int, Any] = {}
 
         self.status_frames = (
             status_frames
@@ -88,6 +106,7 @@ class Spinner:
         )
         self.status_fps = status_fps
 
+        self._worker: SpinnerBackend
         if self.backend == Backend.THREAD:
             self._worker = ThreadBackend(
                 self.stream,
@@ -118,16 +137,19 @@ class Spinner:
             )
 
     def _apply_stdout_proxy(self) -> None:
+        """Mask the stdout target to support concurrent output."""
         if self.stream == sys.stdout:
             self._original_stdout = sys.stdout
             sys.stdout = cast(TextIO, StreamProxy(sys.stdout))
 
     def _restore_stdout_proxy(self) -> None:
+        """Restore the standard output stream."""
         if self._original_stdout is not None:
             sys.stdout = self._original_stdout
             self._original_stdout = None
 
     def _show_cursor(self) -> None:
+        """Restore the terminal cursor using ANSI escape codes."""
         if not self._disabled:
             try:
                 self.stream.write(ANSI_SHOW_CURSOR)
@@ -136,6 +158,7 @@ class Spinner:
                 pass
 
     def _hide_cursor(self) -> None:
+        """Hide the terminal cursor using ANSI escape codes."""
         if not self._disabled:
             try:
                 self.stream.write(ANSI_HIDE_CURSOR)
@@ -143,63 +166,127 @@ class Spinner:
             except (OSError, ValueError):
                 pass
 
+    def _register_signal_handlers(self) -> None:
+        """
+        Chain signal handlers to ensure cursor restoration.
+        """
+        if threading.current_thread() is not threading.main_thread():
+            return
+
+        def _chained_handler(
+            signum: int,
+            frame: types.FrameType | None
+        ) -> None:
+            self._show_cursor()
+            original_handler = self._old_signal_handlers.get(signum)
+            if callable(original_handler):
+                original_handler(signum, frame)
+            elif original_handler == signal.SIG_DFL:
+                signal.signal(signum, signal.SIG_DFL)
+                os.kill(os.getpid(), signum)
+
+        target_signals = [signal.SIGINT, signal.SIGTERM]
+        if hasattr(signal, 'SIGHUP'):
+            target_signals.append(getattr(signal, 'SIGHUP'))
+
+        for sig in target_signals:
+            try:
+                current_handler = signal.getsignal(sig)
+                if getattr(
+                    current_handler, '__name__', ''
+                ) != '_chained_handler':
+                    self._old_signal_handlers[sig] = current_handler
+                    signal.signal(sig, _chained_handler)
+            except (ValueError, OSError):
+                pass
+
+    def _restore_signal_handlers(self) -> None:
+        """Restore the original OS signal handlers when finished."""
+        if threading.current_thread() is not threading.main_thread():
+            return
+
+        for sig, original_handler in self._old_signal_handlers.items():
+            try:
+                signal.signal(sig, original_handler)
+            except (ValueError, OSError, TypeError):
+                pass
+        self._old_signal_handlers.clear()
+
+    def _cleanup(self) -> None:
+        """Safely restore all global state and terminal settings."""
+        self._restore_stdout_proxy()
+        self._show_cursor()
+        self._restore_signal_handlers()
+
     def start(self) -> None:
+        """Manually start the animation."""
         if self._disabled:
             return
         self._hide_cursor()
-        atexit.register(self._show_cursor)
+        self._register_signal_handlers()
         self._apply_stdout_proxy()
+        atexit.register(self._cleanup)
         self._worker.start()
 
     def stop(self) -> None:
+        """Manually stop the animation and restore terminal state."""
         if self._disabled:
             return
         try:
             self._worker.stop()
         finally:
-            self._restore_stdout_proxy()
-            self._show_cursor()
-            atexit.unregister(self._show_cursor)
+            self._cleanup()
+            atexit.unregister(self._cleanup)
 
     def update(self, status_text: str) -> None:
         """
-        Dynamically update the status text while the spinner is running.
+        Rewrite the status text next to the spinner.
         """
         self._state['status_text'] = status_text
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> 'Spinner':
         if not self._disabled:
             self._hide_cursor()
-            atexit.register(self._show_cursor)
+            self._register_signal_handlers()
             self._apply_stdout_proxy()
+            atexit.register(self._cleanup)
             await self._worker.__aenter__()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: types.TracebackType | None
+    ) -> None:
         if not self._disabled:
             try:
                 await self._worker.__aexit__(exc_type, exc_val, exc_tb)
             finally:
-                self._restore_stdout_proxy()
-                self._show_cursor()
-                atexit.unregister(self._show_cursor)
+                self._cleanup()
+                atexit.unregister(self._cleanup)
 
-    def __enter__(self):
+    def __enter__(self) -> 'Spinner':
         if not self._disabled:
             self._hide_cursor()
-            atexit.register(self._show_cursor)
+            self._register_signal_handlers()
             self._apply_stdout_proxy()
+            atexit.register(self._cleanup)
             self._worker.__enter__()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: types.TracebackType | None
+    ) -> None:
         if not self._disabled:
             try:
                 self._worker.__exit__(exc_type, exc_val, exc_tb)
             finally:
-                self._restore_stdout_proxy()
-                self._show_cursor()
-                atexit.unregister(self._show_cursor)
+                self._cleanup()
+                atexit.unregister(self._cleanup)
 
     def __call__(self, func: Callable[P, T]) -> Callable[P, T]:
         if inspect.iscoroutinefunction(func):
