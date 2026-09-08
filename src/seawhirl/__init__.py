@@ -2,10 +2,10 @@
 
 from seawhirl._core.easing import (
     EasingStrategy,
+    Inertial,
     Logarithmic,
     Sinusoidal,
-    Spring,
-    Inertial
+    Spring
 )
 from seawhirl._core.presets import PRESETS
 from seawhirl._lib.spinner import Spinner, Backend
