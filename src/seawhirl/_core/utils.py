@@ -1,11 +1,7 @@
-import importlib.resources
-import json
-from typing import Any
-
 import regex
 from wcwidth import wcswidth
 
-__all__ = ['get_visual_width', 'load_json_data']
+__all__ = ['get_visual_width']
 
 
 def get_visual_width(text: str) -> int:
@@ -26,10 +22,3 @@ def get_visual_width(text: str) -> int:
             total_width += w
 
     return total_width
-
-
-def load_json_data(filename: str) -> dict[str, Any]:
-    """Load JSON data from the _core/data directory."""
-    pkg_files = importlib.resources.files(__package__.split('.')[0])
-    resource = pkg_files.joinpath('_core', 'data', filename)
-    return json.loads(resource.read_text(encoding='utf-8'))
