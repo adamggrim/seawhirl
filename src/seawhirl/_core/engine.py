@@ -3,9 +3,13 @@ import regex
 import shutil
 import time
 
+from seawhirl._core.config import SpinnerConfig
 from seawhirl._core.easing import EasingStrategy
+from seawhirl._core.state import SpinnerState
 from seawhirl._core.terminal import ANSI_MOVE_COLUMN
 from seawhirl._core.utils import get_visual_width
+
+DEFAULT_TERMINAL_SIZE = (80, 24)
 
 
 def _calculate_current_fps(
@@ -45,53 +49,50 @@ def _calculate_current_fps(
     return initial_fps + (peak_fps - initial_fps) * multiplier
 
 
+def _truncate_text(text: str, max_width: int) -> str:
+    """
+    Truncate text to visual width while respecting grapheme boundaries.
+    """
+    truncated_text = ''
+    current_width = 0
+
+    # Ensure complex emojis remain intact.
+    graphemes = regex.findall(r'\X', text)
+
+    for cluster in graphemes:
+        cluster_width = get_visual_width(cluster)
+        if current_width + cluster_width > max_width - 1:
+            truncated_text += '...'
+            break
+        truncated_text += cluster
+        current_width += cluster_width
+
+    return truncated_text
+
+
 class RenderEngine:
-    """
-    Manages spinner animation rendering.
-    """
+    """Manages spinner animation rendering."""
     def __init__(
         self,
-        accel_secs: float,
-        initial_fps: float,
-        peak_fps: float,
-        frames: list[str],
-        easing: EasingStrategy,
-        status_state: dict[str, str],
-        status_frames: list[str],
-        status_fps: float,
-        oscillation: bool = False
+        config: SpinnerConfig,
+        state: SpinnerState
     ) -> None:
         """
-        Initialize the render engine with physics properties and frames.
+        Initialize the render engine with configuration and state.
 
         Args:
-            accel_secs: The seconds to reach the maximum frames per
-                second.
-            initial_fps: The starting frames per second.
-            peak_fps: The maximum frames per second.
-            frames: A sequence of strings representing animation frames.
-            easing: The easing model for the animation.
-            status_state: A mutable dictionary for status text.
-            status_frames: Frames attached to the end of status text.
-            status_fps: Frames per second for the status text animation.
-            oscillation: Whether to oscillate speed.
+            config: Static animation configuration parameters.
+            state: Mutable state for the spinner.
         """
-        self.accel_secs = accel_secs
-        self.initial_fps = initial_fps
-        self.peak_fps = peak_fps
-        self.frames = frames
-        self.easing = easing
-        self.oscillation = oscillation
-        self.status_state = status_state
-        self.status_frames = status_frames
-        self.status_fps = status_fps
+        self.config = config
+        self.state = state
 
-        self.num_frames = len(self.frames)
+        self.num_frames = len(self.config.frames)
         self.num_status_frames = (
-            len(self.status_frames) if self.status_frames else 1
+            len(self.config.status_frames) if self.config.status_frames else 1
         )
         self.max_frame_width = max(
-            (get_visual_width(f) for f in self.frames), default=0
+            (get_visual_width(f) for f in self.config.frames), default=0
         )
 
         self.current_frame = float(random.randint(0, self.num_frames - 1))
@@ -100,6 +101,7 @@ class RenderEngine:
         self.prev_rendered_frame = ''
         self.start_time = time.time()
         self.prev_update_time = self.start_time
+        self._text_cache: tuple[tuple[str, int] | None, str] = (None, '')
 
     def tick(self, now: float) -> str | None:
         """
@@ -118,33 +120,37 @@ class RenderEngine:
 
         current_fps = _calculate_current_fps(
             elapsed_total,
-            self.accel_secs,
-            self.initial_fps,
-            self.peak_fps,
-            self.easing,
-            self.oscillation
+            self.config.accel_secs,
+            self.config.initial_fps,
+            self.config.peak_animation_fps,
+            self.config.easing,
+            self.config.oscillation
         )
 
         self.current_frame += current_fps * elapsed_since_last
         current_frame_idx = int(self.current_frame) % self.num_frames
 
-        self.current_status_frame += self.status_fps * elapsed_since_last
+        self.current_status_frame += (
+            self.config.status_fps * elapsed_since_last
+        )
         status_frame_idx = (
             int(self.current_status_frame) % self.num_status_frames
         )
 
-        icon = self.frames[current_frame_idx]
+        icon = self.config.frames[current_frame_idx]
         console_width = max(
-            1, shutil.get_terminal_size(fallback=(80, 24)).columns - 1
+            1, shutil.get_terminal_size(
+                fallback=DEFAULT_TERMINAL_SIZE
+            ).columns - 1
         )
 
         if get_visual_width(icon) > console_width:
             rendered_frame = ''
         else:
-            text = self.status_state.get('status_text', '')
+            text = self.state.status_text
             suffix = (
-                self.status_frames[status_frame_idx]
-                if text and self.status_frames
+                self.config.status_frames[status_frame_idx]
+                if text and self.config.status_frames
                 else ''
             )
 
@@ -153,23 +159,16 @@ class RenderEngine:
                 available_width = max(
                     0, console_width - (self.max_frame_width + 1)
                 )
+                cache_key = (full_text, available_width)
 
-                if get_visual_width(full_text) > available_width:
-                    truncated_text = ''
-                    curr_w = 0
-
-                    # Ensure complex emojis are never sliced in half.
-                    graphemes = regex.findall(r'\X', full_text)
-
-                    for cluster in graphemes:
-                        cluster_w = get_visual_width(cluster)
-                        if curr_w + cluster_w > available_width - 1:
-                            truncated_text += '…'
-                            break
-                        truncated_text += cluster
-                        curr_w += cluster_w
-
+                if self._text_cache[0] == cache_key:
+                    full_text = self._text_cache[1]
+                elif get_visual_width(full_text) > available_width:
+                    truncated_text = _truncate_text(full_text, available_width)
+                    self._text_cache = (cache_key, truncated_text)
                     full_text = truncated_text
+                else:
+                    self._text_cache = (cache_key, full_text)
 
                 rendered_frame = (
                     f'{icon}'
