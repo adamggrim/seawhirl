@@ -37,13 +37,11 @@ seawhirl/
   ├── _cli/
   │   └── cli.py: Command-line argument parsing
   ├── _core/
-  │   ├── data/
-  │   │   └── presets.json: Default spinner animation frames
   │   ├── backends.py: Threading and asyncio backends for rendering
   │   ├── easing.py: Mathematical easing curves and physics
   │   ├── engine.py: The core rendering engine for the spinner
   │   ├── exceptions.py: Custom exceptions for the seawhirl package
-  │   ├── presets.py: Preset configurations loaded from JSON
+  │   ├── presets.py: Preset configurations
   │   ├── terminal.py: Terminal interaction and cursor manipulation utilities
   │   └── utils.py: Utility functions for the package
   ├── _lib/
