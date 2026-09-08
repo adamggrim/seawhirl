@@ -2,6 +2,18 @@ import math
 from typing import Protocol
 from dataclasses import dataclass
 
+__all__ = [
+    'EASING_REGISTRY',
+    'EasingStrategy',
+    'Inertial',
+    'Logarithmic',
+    'Sinusoidal',
+    'Spring',
+    'get_easing_strategy'
+]
+
+MINIMUM_SAFE_BASE = 1.0001
+
 
 class EasingStrategy(Protocol):
     """Protocol for calculating custom easing curves."""
@@ -15,7 +27,7 @@ class Logarithmic:
     base: float = 10.0
 
     def calculate_multiplier(self, progress: float) -> float:
-        safe_base = max(1.0001, self.base)
+        safe_base = max(MINIMUM_SAFE_BASE, self.base)
         return math.log(1 + (safe_base - 1) * progress, safe_base)
 
 
@@ -45,3 +57,19 @@ class Inertial:
 
     def calculate_multiplier(self, progress: float) -> float:
         return math.pow(progress, self.power)
+
+
+EASING_REGISTRY: dict[str, type[EasingStrategy]] = {
+    'inertial': Inertial,
+    'log': Logarithmic,
+    'logarithmic': Logarithmic,
+    'sin': Sinusoidal,
+    'sine': Sinusoidal,
+    'sinusoidal': Sinusoidal,
+    'spring': Spring
+}
+
+
+def get_easing_strategy(name: str) -> EasingStrategy:
+    """Factory function for retrieving easing algorithms."""
+    return EASING_REGISTRY[name]()

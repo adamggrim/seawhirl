@@ -3,28 +3,13 @@ import shutil
 import sys
 import time
 
-from seawhirl._core.easing import (
-    EasingStrategy,
-    Logarithmic,
-    Sinusoidal,
-    Spring,
-    Inertial
-)
+from seawhirl._core.easing import get_easing_strategy
 from seawhirl._core.presets import PRESETS
 from seawhirl._lib.spinner import Spinner
 
-EASING_MAP: dict[str, type[EasingStrategy]] = {
-    'sinusoidal': Sinusoidal,
-    'sin': Sinusoidal,
-    'sine': Sinusoidal,
-    'spring': Spring,
-    'inertial': Inertial,
-    'logarithmic': Logarithmic,
-    'log': Logarithmic
-}
 
-
-def main() -> None:
+def _build_parser() -> argparse.ArgumentParser:
+    """Construct and configure the command-line argument parser."""
     def formatter(prog: str) -> argparse.HelpFormatter:
         """
         A custom help formatter to align help messages neatly based on
@@ -56,9 +41,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         usage='seawhirl [preset] [options]',
         description=presets_description,
-        epilog=(
-            'To access advanced physics, use the package API.'
-        ),
+        epilog='To access advanced physics, use the package API.',
         formatter_class=formatter
     )
 
@@ -116,6 +99,11 @@ def main() -> None:
         help='pulse the animation speed back and forth'
     )
 
+    return parser
+
+
+def main() -> None:
+    parser = _build_parser()
     args = parser.parse_args()
 
     if args.custom:
@@ -123,7 +111,7 @@ def main() -> None:
     else:
         frames = PRESETS[args.preset]
 
-    easing_strategy = EASING_MAP[args.easing]()
+    easing_strategy = get_easing_strategy(args.easing)
 
     try:
         spinner = Spinner(
