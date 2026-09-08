@@ -1,6 +1,6 @@
 # Seawhirl
 
-`seawhirl` is a Python package for accelerating CLI spinners.
+`seawhirl` is a Python package for accelerating terminal spinners.
 
 ## Requirements
 
