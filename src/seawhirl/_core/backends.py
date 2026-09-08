@@ -1,13 +1,14 @@
 import asyncio
+import sys
+import threading
 import time
 import types
-import threading
-import sys
 from abc import ABC, abstractmethod
 from typing import TextIO
 
-from seawhirl._core.easing import EasingStrategy
+from seawhirl._core.config import SpinnerConfig
 from seawhirl._core.engine import RenderEngine
+from seawhirl._core.state import SpinnerState
 from seawhirl._core.terminal import ANSI_CARRIAGE_RETURN, ANSI_CLEAR_LINE
 from seawhirl._core.exceptions import BackendStartupError
 
@@ -18,29 +19,14 @@ class SpinnerBackend(ABC):
     execution strategies.
     """
     def __init__(
-        self, stream: TextIO,
-        accel_secs: float,
-        initial_fps: float,
-        peak_animation_fps: float,
-        loop_delay: float,
-        frames: list[str],
-        easing: EasingStrategy,
-        status_state: dict[str, str],
-        status_frames: list[str],
-        status_fps: float,
-        oscillation: bool = False
+        self,
+        stream: TextIO,
+        config: SpinnerConfig,
+        state: SpinnerState
     ) -> None:
         self.stream = stream
-        self.accel_secs = accel_secs
-        self.initial_fps = initial_fps
-        self.peak_animation_fps = peak_animation_fps
-        self.loop_delay = loop_delay
-        self.frames = frames
-        self.easing = easing
-        self.oscillation = oscillation
-        self.status_state = status_state
-        self.status_frames = status_frames
-        self.status_fps = status_fps
+        self.config = config
+        self.state = state
 
     @abstractmethod
     def start(self) -> None:
@@ -70,9 +56,9 @@ class SpinnerBackend(ABC):
 
     def __exit__(
         self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: types.TracebackType | None
+        _exc_type: type[BaseException] | None,
+        _exc_val: BaseException | None,
+        _exc_tb: types.TracebackType | None
     ) -> None:
         self.stop()
 
@@ -82,9 +68,9 @@ class SpinnerBackend(ABC):
 
     async def __aexit__(
         self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: types.TracebackType | None
+        _exc_type: type[BaseException] | None,
+        _exc_val: BaseException | None,
+        _exc_tb: types.TracebackType | None
     ) -> None:
         await self.astop()
 
@@ -98,45 +84,18 @@ class ThreadBackend(SpinnerBackend):
     def __init__(
         self,
         stream: TextIO,
-        accel_secs: float,
-        initial_fps: float,
-        peak_animation_fps: float,
-        loop_delay: float,
-        frames: list[str],
-        easing: EasingStrategy,
-        status_state: dict[str, str],
-        status_frames: list[str],
-        status_fps: float,
-        oscillation: bool
+        config: SpinnerConfig,
+        state: SpinnerState
     ) -> None:
-        super().__init__(
-            stream,
-            accel_secs,
-            initial_fps,
-            peak_animation_fps,
-            loop_delay,
-            frames, easing,
-            status_state,
-            status_frames,
-            status_fps,
-            oscillation
-        )
+        super().__init__(stream, config, state)
         self._thread: threading.Thread | None = None
         self._stop_event = threading.Event()
 
     def _sync_render_loop(self) -> None:
-        """Internal synchronous polling loop mapping Engine state to IO."""
-        engine = RenderEngine(
-            self.accel_secs,
-            self.initial_fps,
-            self.peak_animation_fps,
-            self.frames,
-            self.easing,
-            self.status_state,
-            self.status_frames,
-            self.status_fps,
-            self.oscillation
-        )
+        """
+        Internal synchronous polling loop mapping Engine state to IO.
+        """
+        engine = RenderEngine(self.config, self.state)
 
         try:
             next_tick = time.time()
@@ -151,7 +110,7 @@ class ThreadBackend(SpinnerBackend):
                     )
                     self.stream.flush()
 
-                next_tick += self.loop_delay
+                next_tick += self.config.loop_delay
                 time.sleep(max(0.0, next_tick - time.time()))
         except KeyboardInterrupt:
             pass
@@ -188,21 +147,10 @@ class AsyncBackend(SpinnerBackend):
     def __init__(
         self,
         stream: TextIO,
-        accel_secs: float,
-        initial_fps: float,
-        peak_animation_fps: float,
-        loop_delay: float,
-        frames: list[str],
-        easing: EasingStrategy,
-        status_state: dict[str, str],
-        status_frames: list[str],
-        status_fps: float
+        config: SpinnerConfig,
+        state: SpinnerState
     ) -> None:
-        super().__init__(
-            stream, accel_secs, initial_fps, peak_animation_fps,
-            loop_delay, frames, easing, status_state,
-            status_frames, status_fps
-        )
+        super().__init__(stream, config, state)
         self._async_task: asyncio.Task[None] | None = None
 
     def start(self) -> None:
@@ -217,18 +165,10 @@ class AsyncBackend(SpinnerBackend):
         pass
 
     async def _async_render_loop(self) -> None:
-        """Internal asynchronous polling loop mapping Engine state to IO."""
-        engine = RenderEngine(
-            self.accel_secs,
-            self.initial_fps,
-            self.peak_animation_fps,
-            self.frames,
-            self.easing,
-            self.status_state,
-            self.status_frames,
-            self.status_fps,
-            self.oscillation
-        )
+        """
+        Internal asynchronous polling loop mapping engine state to IO.
+        """
+        engine = RenderEngine(self.config, self.state)
 
         try:
             while True:
@@ -243,7 +183,9 @@ class AsyncBackend(SpinnerBackend):
                     self.stream.flush()
 
                 work_time = time.time() - now
-                await asyncio.sleep(max(0.0, self.loop_delay - work_time))
+                await asyncio.sleep(
+                    max(0.0, self.config.loop_delay - work_time)
+                )
         except asyncio.CancelledError:
             raise
         finally:
