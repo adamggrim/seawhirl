@@ -18,6 +18,11 @@ dependencies = [
     "regex>=2023.12.25"
 ]
 
+[project.optional-dependencies]
+test = [
+    "pytest-asyncio"
+]
+
 [project.scripts]
 seawhirl = "seawhirl._cli.cli:main"
 
@@ -28,10 +33,10 @@ seawhirl = "seawhirl._cli.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-seawhirl = ["py.typed", "_core/data/*.json"]
+seawhirl = ["py.typed"]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+asyncio_mode = "auto"
 
 [tool.mypy]
 python_version = "3.10"
