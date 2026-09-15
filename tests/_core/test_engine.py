@@ -81,7 +81,7 @@ def engine_config() -> SpinnerConfig:
     return SpinnerConfig(
         accel_secs=2.0,
         initial_fps=10.0,
-        peak_animation_fps=10.0,  # Constant FPS for predictable math
+        peak_animation_fps=10.0,
         loop_delay=0.1,
         frames=['1', '2', '3', '4'],
         easing=Logarithmic(),
