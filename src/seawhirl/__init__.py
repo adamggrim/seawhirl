@@ -7,15 +7,23 @@ from seawhirl._core.easing import (
     Sinusoidal,
     Spring
 )
+from seawhirl._core.exceptions import (
+    BackendStartupError,
+    InvalidPresetError,
+    SeawhirlError
+)
 from seawhirl._core.presets import PRESETS
 from seawhirl._lib.spinner import Spinner, Backend
 
 __all__ = [
     'Backend',
+    'BackendStartupError',
     'EasingStrategy',
     'Inertial',
+    'InvalidPresetError',
     'Logarithmic',
     'PRESETS',
+    'SeawhirlError',
     'Sinusoidal',
     'Spinner',
     'Spring'
