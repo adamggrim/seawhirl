@@ -58,7 +58,7 @@ seawhirl/
 
 Follow these steps to install `seawhirl`:
 
-1. **Prerequisites**: Verify that you have Python 3.10 or later. You can install Python at `https://www.python.org/downloads/`. Install Git at `https://git-scm.com/install/`.
+1. **Prerequisites**: Verify that you have Python 3.10 or later. You can install Python at [python.org/downloads](https://www.python.org/downloads/) and Git at [git-scm.com/install](https://git-scm.com/install/).
 
 2. **Install the package**: Install `seawhirl` and its dependencies using pip.
 
