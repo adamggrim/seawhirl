@@ -19,9 +19,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = [
-    "pytest-asyncio"
-]
+test = ["pytest", "pytest-asyncio", "pytest-cov"]
 
 [project.scripts]
 seawhirl = "seawhirl._cli.cli:main"
@@ -51,5 +49,3 @@ warn_redundant_casts = true
 warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
-
-ignore_missing_imports = true
