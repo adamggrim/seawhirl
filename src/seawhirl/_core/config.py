@@ -1,3 +1,5 @@
+"""Spinner configuration objects."""
+
 from dataclasses import dataclass
 from seawhirl._core.easing import EasingStrategy
 
