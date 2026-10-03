@@ -26,18 +26,16 @@ class StreamProxy:
         self._lock = threading.Lock()
 
     def write(self, data: str) -> int:
+        if not data:
+            return 0
         with self._lock:
-            if data == '\n':
-                self._original_stream.write(data)
-                self._is_new_line = True
+            if self._is_new_line and data != '\n':
+                self._original_stream.write(
+                    f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}{data}'
+                )
             else:
-                if self._is_new_line:
-                    self._original_stream.write(
-                        f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}{data}'
-                    )
-                    self._is_new_line = False
-                else:
-                    self._original_stream.write(data)
+                self._original_stream.write(data)
+            self._is_new_line = data.endswith('\n')
             return len(data)
 
     def flush(self) -> None:
