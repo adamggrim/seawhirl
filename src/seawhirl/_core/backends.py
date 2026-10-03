@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import sys
 import threading
@@ -152,10 +154,12 @@ class AsyncBackend(SpinnerBackend):
         self,
         stream: TextIO,
         config: SpinnerConfig,
-        state: SpinnerState
+        state: SpinnerState,
+        lock: threading.Lock | None = None
     ) -> None:
         super().__init__(stream, config, state)
         self._async_task: asyncio.Task[None] | None = None
+        self._lock = lock or threading.Lock()
 
     def start(self) -> None:
         """Block illegal synchronous invocations."""
@@ -180,11 +184,12 @@ class AsyncBackend(SpinnerBackend):
                 rendered_frame = engine.tick(now)
 
                 if rendered_frame is not None:
-                    self.stream.write(
-                        f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}'
-                        f'{rendered_frame}'
-                    )
-                    self.stream.flush()
+                    with self._lock:
+                        self.stream.write(
+                            f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}'
+                            f'{rendered_frame}'
+                        )
+                        self.stream.flush()
 
                 work_time = time.time() - now
                 await asyncio.sleep(
@@ -193,8 +198,9 @@ class AsyncBackend(SpinnerBackend):
         except asyncio.CancelledError:
             raise
         finally:
-            self.stream.write(f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}')
-            self.stream.flush()
+            with self._lock:
+                self.stream.write(f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}')
+                self.stream.flush()
 
     async def astart(self) -> None:
         """Schedule the worker coroutine in the active event loop."""

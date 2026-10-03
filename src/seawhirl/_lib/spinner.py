@@ -79,8 +79,14 @@ class Spinner:
                     f'Available presets: {list(PRESETS.keys())}'
                 )
             self.frames = PRESETS[frames]
+        elif frames is None:
+            self.frames = PRESETS[SpinnerDefaults.PRESET]
         else:
-            self.frames = frames or PRESETS[SpinnerDefaults.PRESET]
+            if not frames or not any(frames):
+                raise ValueError(
+                    'frames must contain at least one non-empty string.'
+                )
+            self.frames = frames
 
         self._disabled = not is_supported_terminal(self.stream)
         if not self._disabled:
@@ -118,7 +124,9 @@ class Spinner:
                 self.stream, self.config, self.state, lock=self.lifecycle.lock
             )
         elif self.backend == Backend.ASYNC:
-            self._worker = AsyncBackend(self.stream, self.config, self.state)
+            self._worker = AsyncBackend(
+                self.stream, self.config, self.state, lock=self.lifecycle.lock
+            )
 
     def start(self) -> None:
         """Manually start the animation."""

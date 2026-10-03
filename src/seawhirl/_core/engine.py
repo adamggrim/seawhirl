@@ -35,7 +35,7 @@ def _calculate_current_fps(
     Returns:
         float: The calculated frames per second for this tick.
     """
-    if not oscillation and elapsed_total >= accel_secs:
+    if accel_secs <= 0 or (not oscillation and elapsed_total >= accel_secs):
         return peak_fps
 
     if oscillation:
@@ -53,15 +53,23 @@ def _truncate_text(text: str, max_width: int) -> str:
     """
     Truncate text to visual width while respecting grapheme boundaries.
     """
+    if max_width <= 0:
+        return ''
+    if get_visual_width(text) <= max_width:
+        return text
+    if max_width <= 3:
+        return '.' * max_width
+
     truncated_text = ''
     current_width = 0
+    target_width = max_width - 3
 
     # Ensure complex emojis remain intact.
     graphemes = regex.findall(r'\X', text)
 
     for cluster in graphemes:
         cluster_width = get_visual_width(cluster)
-        if current_width + cluster_width > max_width - 1:
+        if current_width + cluster_width > target_width:
             truncated_text += '...'
             break
         truncated_text += cluster
