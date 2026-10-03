@@ -66,13 +66,13 @@ def test_truncate_text_short() -> None:
 
 def test_truncate_text_long() -> None:
     assert _truncate_text(
-        'splash your great pines / on our rocks', 24
-        ) == 'splash your great pines...'
+        'splash your great pines / on our rocks', 26
+    ) == 'splash your great pines...'
 
 
 def test_truncate_text_with_emojis() -> None:
-    text = 'H👨‍👩‍👧‍👦D'
-    truncated = _truncate_text(text, 2)
+    text = 'H.👨‍👩‍👧‍👦D.'
+    truncated = _truncate_text(text, 4)
     assert truncated == 'H...'
 
 

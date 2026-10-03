@@ -2,7 +2,8 @@ import io
 import os
 import signal
 import sys
-from unittest.mock import MagicMock, patch
+import threading
+from unittest.mock import ANY, MagicMock, patch
 
 import pytest
 
@@ -19,15 +20,13 @@ from seawhirl._core.terminal import (
 
 
 class TestStreamProxy:
-    def test_write_prepends_ansi_codes_for_new_lines(self) -> None:
+    def test_write_empty_string_returns_zero(self) -> None:
         stream = io.StringIO()
         proxy = StreamProxy(stream)
 
-        proxy.write('Whirl up sea...')
-
-        expected = f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}Whirl up sea...'
-        assert stream.getvalue() == expected
-        assert proxy._is_new_line is False
+        assert proxy.write('') == 0
+        assert stream.getvalue() == ''
+        assert proxy._is_new_line is True
 
     def test_write_handles_bare_newlines(self) -> None:
         stream = io.StringIO()
@@ -37,6 +36,16 @@ class TestStreamProxy:
 
         assert stream.getvalue() == '\n'
         assert proxy._is_new_line is True
+
+    def test_write_prepends_ansi_codes_for_new_lines(self) -> None:
+        stream = io.StringIO()
+        proxy = StreamProxy(stream)
+
+        proxy.write('Whirl up sea...')
+
+        expected = f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}Whirl up sea...'
+        assert stream.getvalue() == expected
+        assert proxy._is_new_line is False
 
     def test_write_continuous_text(self) -> None:
         stream = io.StringIO()
@@ -48,6 +57,22 @@ class TestStreamProxy:
         expected = (
             f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}'
             'whirl your pointed pines'
+        )
+        assert stream.getvalue() == expected
+
+    def test_write_multiline_tracks_trailing_newline(self) -> None:
+        stream = io.StringIO()
+        proxy = StreamProxy(stream)
+
+        proxy.write('Whirl up, sea—\n')
+        assert proxy._is_new_line is True
+
+        proxy.write('whirl your pointed pines')
+        assert proxy._is_new_line is False
+
+        expected = (
+            f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}Whirl up, sea—\n'
+            f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}whirl your pointed pines'
         )
         assert stream.getvalue() == expected
 
@@ -63,6 +88,16 @@ class TestStreamProxy:
 
         proxy.flush()
         stream.flush.assert_called_once()
+
+    def test_getattr_delegates_to_original_stream(self) -> None:
+        stream = MagicMock()
+        stream.encoding = 'utf-8'
+        stream.errors = 'strict'
+
+        proxy = StreamProxy(stream)
+
+        assert proxy.encoding == 'utf-8'
+        assert proxy.errors == 'strict'
 
 
 class TestTerminalLifecycle:
@@ -92,6 +127,20 @@ class TestTerminalLifecycle:
 
         assert sys.stdout is original_stdout
 
+    def test_stdout_proxy_shares_lifecycle_lock(self) -> None:
+        stream = MagicMock()
+        shared_lock = threading.Lock()
+
+        with TerminalLifecycle(
+            stream,
+            disabled=False,
+            handle_signals=False,
+            lock=shared_lock
+        ) as lifecycle:
+            assert isinstance(sys.stdout, StreamProxy)
+            assert sys.stdout._lock is shared_lock
+            assert lifecycle.lock is shared_lock
+
     @patch('signal.signal')
     @patch('signal.getsignal')
     def test_signal_handler_registration(
@@ -106,6 +155,26 @@ class TestTerminalLifecycle:
             assert mock_signal.call_count == 2
 
         assert mock_signal.call_count == 4
+
+    @patch('signal.signal')
+    @patch('signal.getsignal')
+    def test_sigint_default_int_handler_registration(
+        self,
+        mock_getsignal: MagicMock,
+        mock_signal: MagicMock
+    ) -> None:
+        stream = MagicMock()
+        mock_getsignal.side_effect = [
+            signal.default_int_handler,
+            signal.SIG_DFL
+        ]
+
+        with TerminalLifecycle(stream, disabled=False, handle_signals=True):
+            assert mock_signal.call_count == 2
+            mock_signal.assert_any_call(
+                signal.SIGINT,
+                ANY
+            )
 
 
 class TestWindowsVTProcessing:
@@ -122,28 +191,22 @@ class TestWindowsVTProcessing:
         _mock_system: MagicMock
     ) -> None:
         """Verify Windows standard handles are modified using ctypes."""
-        with patch('seawhirl._core.terminal.enable_windows_vt_processing'):
-            # Assume logic executes if no exception is raised.
-            pass
+        mock_ctypes = MagicMock()
+        with patch.dict(sys.modules, {'ctypes': mock_ctypes}):
+            enable_windows_vt_processing()
+            assert mock_ctypes.windll.kernel32.GetStdHandle.called
 
 
 class TestIsSupportedTerminal:
     """Tests for evaluating terminal capability heuristics."""
 
-    @pytest.mark.parametrize('env_var, value', [
-        ('CI', '1'),
-        ('NO_COLOR', '1'),
-        ('TERM', 'dumb'),
-    ])
-    def test_environment_variables_disable_support(
-        self,
-        env_var: str,
-        value: str
-    ) -> None:
+    def test_supported_terminal(self) -> None:
         stream = MagicMock()
+        stream.isatty.return_value = True
+        stream.encoding = 'utf-8'
 
-        with patch.dict(os.environ, {env_var: value}):
-            assert is_supported_terminal(stream) is False
+        with patch.dict(os.environ, clear=True):
+            assert is_supported_terminal(stream) is True
 
     def test_missing_isatty_disables_support(self) -> None:
         stream = MagicMock()
@@ -161,10 +224,19 @@ class TestIsSupportedTerminal:
         with patch.dict(os.environ, clear=True):
             assert is_supported_terminal(stream) is False
 
-    def test_supported_terminal(self) -> None:
+    @pytest.mark.parametrize('env_var, value', [
+        ('CI', '1'),
+        ('NO_COLOR', 'hurl your green over us'),
+        ('TERM', 'dumb'),
+    ])
+    def test_environment_variables_disable_support(
+        self,
+        env_var: str,
+        value: str
+    ) -> None:
         stream = MagicMock()
         stream.isatty.return_value = True
         stream.encoding = 'utf-8'
 
-        with patch.dict(os.environ, clear=True):
-            assert is_supported_terminal(stream) is True
+        with patch.dict(os.environ, {env_var: value}, clear=True):
+            assert is_supported_terminal(stream) is False

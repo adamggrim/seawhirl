@@ -6,6 +6,11 @@ from seawhirl._core.easing import (
     Sinusoidal,
     Spring,
 )
+from seawhirl._core.exceptions import (
+    BackendStartupError,
+    InvalidPresetError,
+    SeawhirlError,
+)
 from seawhirl._core.presets import PRESETS
 from seawhirl._lib.spinner import Backend, Spinner
 
@@ -13,10 +18,13 @@ from seawhirl._lib.spinner import Backend, Spinner
 def test_all_exports() -> None:
     expected_exports = [
         'Backend',
+        'BackendStartupError',
         'EasingStrategy',
         'Inertial',
+        'InvalidPresetError',
         'Logarithmic',
         'PRESETS',
+        'SeawhirlError',
         'Sinusoidal',
         'Spinner',
         'Spring'
@@ -28,10 +36,13 @@ def test_all_exports() -> None:
 
 def test_imports_match_origins() -> None:
     assert seawhirl.Backend is Backend
+    assert seawhirl.BackendStartupError is BackendStartupError
     assert seawhirl.EasingStrategy is EasingStrategy
     assert seawhirl.Inertial is Inertial
+    assert seawhirl.InvalidPresetError is InvalidPresetError
     assert seawhirl.Logarithmic is Logarithmic
     assert seawhirl.PRESETS is PRESETS
+    assert seawhirl.SeawhirlError is SeawhirlError
     assert seawhirl.Sinusoidal is Sinusoidal
     assert seawhirl.Spinner is Spinner
     assert seawhirl.Spring is Spring
