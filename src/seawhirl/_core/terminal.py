@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 import atexit
 import os
 import platform
 import signal
 import sys
 import threading
+import types
 from typing import Any, TextIO
 
 ANSI_HIDE_CURSOR = '\033[?25l'
@@ -62,17 +65,20 @@ class TerminalLifecycle:
     """
     def __init__(
         self,
-        original_stream: TextIO,
+        stream: TextIO,
+        disabled: bool = False,
+        handle_signals: bool = True,
         lock: threading.Lock | None = None
     ) -> None:
-        self._original_stream = original_stream
-        self._is_new_line = True
-        self._lock = lock or threading.Lock()
-        self._original_stdout = None
-        self._sigint_handler = None
-        self._sigterm_handler = None
+        self.stream = stream
+        self.disabled = disabled
+        self.handle_signals = handle_signals
+        self.lock = lock or threading.Lock()
+        self._original_stdout: TextIO | None = None
+        self._sigint_handler: Any = None
+        self._sigterm_handler: Any = None
 
-    def __enter__(self):
+    def __enter__(self) -> 'TerminalLifecycle':
         if not self.disabled:
             self._hide_cursor()
             if self.handle_signals:
@@ -81,7 +87,12 @@ class TerminalLifecycle:
             atexit.register(self._cleanup)
         return self
 
-    def __exit__(self, _exc_type, _exc_val, _exc_tb):
+    def __exit__(
+        self,
+        _exc_type: type[BaseException] | None,
+        _exc_val: BaseException | None,
+        _exc_tb: types.TracebackType | None
+    ) -> None:
         if not self.disabled:
             self._cleanup()
             atexit.unregister(self._cleanup)
@@ -116,7 +127,11 @@ class TerminalLifecycle:
         except ValueError:
             pass
 
-    def _handle_signal(self, signum, frame) -> None:
+    def _handle_signal(
+        self,
+        signum: int,
+        frame: types.FrameType | None
+    ) -> None:
         self._cleanup()
 
         original_handler = (
