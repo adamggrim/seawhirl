@@ -4,7 +4,7 @@ import platform
 import signal
 import sys
 import threading
-from typing import TextIO
+from typing import Any, TextIO
 
 ANSI_HIDE_CURSOR = '\033[?25l'
 ANSI_SHOW_CURSOR = '\033[?25h'
@@ -49,6 +49,9 @@ class StreamProxy:
 
     def fileno(self) -> int:
         return self._original_stream.fileno()
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._original_stream, name)
 
 
 class TerminalLifecycle:
