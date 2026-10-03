@@ -38,10 +38,12 @@ seawhirl/
   │   └── cli.py: Command-line argument parsing
   ├── _core/
   │   ├── backends.py: Threading and asyncio backends for rendering
+  │   ├── config.py: Spinner configuration objects
   │   ├── easing.py: Mathematical easing curves and physics
   │   ├── engine.py: The core rendering engine for the spinner
   │   ├── exceptions.py: Custom exceptions for the seawhirl package
   │   ├── presets.py: Preset configurations
+  │   ├── state.py: State management for the spinner
   │   ├── terminal.py: Terminal interaction and cursor manipulation utilities
   │   └── utils.py: Utility functions for the package
   ├── _lib/
@@ -61,7 +63,7 @@ Follow these steps to install `seawhirl`:
 2. **Install the package**: Install `seawhirl` and its dependencies using pip.
 
     ```bash
-    pip install git+[https://github.com/adamggrim/seawhirl.git](https://github.com/adamggrim/seawhirl.git)
+    pip install git+https://github.com/adamggrim/seawhirl.git
     ```
     *Note: On macOS/Linux, you may need to use `pip3` instead of `pip`*.
 
