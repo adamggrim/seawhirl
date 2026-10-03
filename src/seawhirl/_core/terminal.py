@@ -20,10 +20,14 @@ class StreamProxy:
     """
     Class for intercepting `print()` calls to prevent visual tearing.
     """
-    def __init__(self, original_stream: TextIO) -> None:
+    def __init__(
+        self,
+        original_stream: TextIO,
+        lock: threading.Lock | None = None
+    ) -> None:
         self._original_stream = original_stream
         self._is_new_line = True
-        self._lock = threading.Lock()
+        self._lock = lock or threading.Lock()
 
     def write(self, data: str) -> int:
         if not data:
@@ -57,13 +61,13 @@ class TerminalLifecycle:
     Context manager isolating all terminal mutations and signal hooks.
     """
     def __init__(
-        self, stream: TextIO,
-        disabled: bool,
-        handle_signals: bool = True
-    ):
-        self.stream = stream
-        self.disabled = disabled
-        self.handle_signals = handle_signals
+        self,
+        original_stream: TextIO,
+        lock: threading.Lock | None = None
+    ) -> None:
+        self._original_stream = original_stream
+        self._is_new_line = True
+        self._lock = lock or threading.Lock()
         self._original_stdout = None
         self._sigint_handler = None
         self._sigterm_handler = None
@@ -95,14 +99,17 @@ class TerminalLifecycle:
             self._original_stdout = None
         else:
             self._original_stdout = sys.stdout
-            sys.stdout = StreamProxy(sys.stdout)
+            sys.stdout = StreamProxy(sys.stdout, lock=self.lock)
 
     def _register_signal_handlers(self) -> None:
         try:
             self._sigint_handler = signal.getsignal(signal.SIGINT)
             self._sigterm_handler = signal.getsignal(signal.SIGTERM)
 
-            if self._sigint_handler == signal.SIG_DFL:
+            if self._sigint_handler in (
+                signal.SIG_DFL,
+                signal.default_int_handler
+            ):
                 signal.signal(signal.SIGINT, self._handle_signal)
             if self._sigterm_handler == signal.SIG_DFL:
                 signal.signal(signal.SIGTERM, self._handle_signal)

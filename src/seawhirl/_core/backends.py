@@ -85,11 +85,13 @@ class ThreadBackend(SpinnerBackend):
         self,
         stream: TextIO,
         config: SpinnerConfig,
-        state: SpinnerState
+        state: SpinnerState,
+        lock: threading.Lock | None = None
     ) -> None:
         super().__init__(stream, config, state)
         self._thread: threading.Thread | None = None
         self._stop_event = threading.Event()
+        self._lock = lock or threading.Lock()
 
     def _sync_render_loop(self) -> None:
         """
@@ -104,11 +106,12 @@ class ThreadBackend(SpinnerBackend):
                 rendered_frame = engine.tick(now)
 
                 if rendered_frame is not None:
-                    self.stream.write(
-                        f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}'
-                        f'{rendered_frame}'
-                    )
-                    self.stream.flush()
+                    with self._lock:
+                        self.stream.write(
+                            f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}'
+                            f'{rendered_frame}'
+                        )
+                        self.stream.flush()
 
                 next_tick += self.config.loop_delay
                 time.sleep(max(0.0, next_tick - time.time()))
@@ -118,8 +121,9 @@ class ThreadBackend(SpinnerBackend):
             sys.stderr.write(f'\nSpinner worker encountered an error: {e}\n')
             sys.stderr.flush()
         finally:
-            self.stream.write(f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}')
-            self.stream.flush()
+            with self._lock:
+                self.stream.write(f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}')
+                self.stream.flush()
 
     def start(self) -> None:
         """Initialize the thread loop safely."""

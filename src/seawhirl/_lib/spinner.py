@@ -114,7 +114,9 @@ class Spinner:
 
         self._worker: SpinnerBackend
         if self.backend == Backend.THREAD:
-            self._worker = ThreadBackend(self.stream, self.config, self.state)
+            self._worker = ThreadBackend(
+                self.stream, self.config, self.state, lock=self.lifecycle.lock
+            )
         elif self.backend == Backend.ASYNC:
             self._worker = AsyncBackend(self.stream, self.config, self.state)
 
