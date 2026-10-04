@@ -8,11 +8,10 @@ import types
 from abc import ABC, abstractmethod
 from typing import TextIO
 
-from seawhirl._core.config import SpinnerConfig
+from seawhirl._core.config import SpinnerConfig, SpinnerState
 from seawhirl._core.engine import RenderEngine
-from seawhirl._core.state import SpinnerState
-from seawhirl._core.terminal import ANSI_CARRIAGE_RETURN, ANSI_CLEAR_LINE
 from seawhirl._core.exceptions import BackendStartupError
+from seawhirl._core.terminal import ANSI_CARRIAGE_RETURN, ANSI_CLEAR_LINE
 
 
 class SpinnerBackend(ABC):
@@ -24,11 +23,18 @@ class SpinnerBackend(ABC):
         self,
         stream: TextIO,
         config: SpinnerConfig,
-        state: SpinnerState
+        state: SpinnerState,
+        lock: threading.Lock | None = None
     ) -> None:
         self.stream = stream
         self.config = config
         self.state = state
+        self._lock = lock or threading.Lock()
+
+    def _write_frame(self, frame: str = '') -> None:
+        with self._lock:
+            self.stream.write(f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}{frame}')
+            self.stream.flush()
 
     @abstractmethod
     def start(self) -> None:
@@ -90,30 +96,18 @@ class ThreadBackend(SpinnerBackend):
         state: SpinnerState,
         lock: threading.Lock | None = None
     ) -> None:
-        super().__init__(stream, config, state)
+        super().__init__(stream, config, state, lock)
         self._thread: threading.Thread | None = None
         self._stop_event = threading.Event()
-        self._lock = lock or threading.Lock()
 
     def _sync_render_loop(self) -> None:
-        """
-        Internal synchronous polling loop mapping Engine state to IO.
-        """
         engine = RenderEngine(self.config, self.state)
 
         try:
             next_tick = time.time()
             while not self._stop_event.is_set():
-                now = time.time()
-                rendered_frame = engine.tick(now)
-
-                if rendered_frame is not None:
-                    with self._lock:
-                        self.stream.write(
-                            f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}'
-                            f'{rendered_frame}'
-                        )
-                        self.stream.flush()
+                if (rendered := engine.tick(time.time())) is not None:
+                    self._write_frame(rendered)
 
                 next_tick += self.config.loop_delay
                 time.sleep(max(0.0, next_tick - time.time()))
@@ -123,9 +117,7 @@ class ThreadBackend(SpinnerBackend):
             sys.stderr.write(f'\nSpinner worker encountered an error: {e}\n')
             sys.stderr.flush()
         finally:
-            with self._lock:
-                self.stream.write(f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}')
-                self.stream.flush()
+            self._write_frame()
 
     def start(self) -> None:
         """Initialize the thread loop safely."""
@@ -157,9 +149,8 @@ class AsyncBackend(SpinnerBackend):
         state: SpinnerState,
         lock: threading.Lock | None = None
     ) -> None:
-        super().__init__(stream, config, state)
+        super().__init__(stream, config, state, lock)
         self._async_task: asyncio.Task[None] | None = None
-        self._lock = lock or threading.Lock()
 
     def start(self) -> None:
         """Block illegal synchronous invocations."""
@@ -181,15 +172,8 @@ class AsyncBackend(SpinnerBackend):
         try:
             while True:
                 now = time.time()
-                rendered_frame = engine.tick(now)
-
-                if rendered_frame is not None:
-                    with self._lock:
-                        self.stream.write(
-                            f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}'
-                            f'{rendered_frame}'
-                        )
-                        self.stream.flush()
+                if (rendered := engine.tick(now)) is not None:
+                    self._write_frame(rendered)
 
                 work_time = time.time() - now
                 await asyncio.sleep(
@@ -198,9 +182,7 @@ class AsyncBackend(SpinnerBackend):
         except asyncio.CancelledError:
             raise
         finally:
-            with self._lock:
-                self.stream.write(f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}')
-                self.stream.flush()
+            self._write_frame()
 
     async def astart(self) -> None:
         """Schedule the worker coroutine in the active event loop."""
