@@ -3,14 +3,13 @@ from unittest.mock import patch
 
 import pytest
 
-from seawhirl._core.config import SpinnerConfig
+from seawhirl._core.config import SpinnerConfig, SpinnerState
 from seawhirl._core.easing import Logarithmic
 from seawhirl._core.engine import (
     RenderEngine,
     _calculate_current_fps,
     _truncate_text,
 )
-from seawhirl._core.state import SpinnerState
 from seawhirl._core.terminal import ANSI_MOVE_COLUMN
 
 
