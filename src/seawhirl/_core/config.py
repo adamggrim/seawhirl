@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from seawhirl._core.easing import EasingStrategy
 
-__all__ = ['SpinnerConfig']
+__all__ = ['SpinnerConfig', 'SpinnerState']
 
 
 @dataclass(slots=True, frozen=True)
@@ -18,3 +18,9 @@ class SpinnerConfig:
     status_frames: list[str]
     status_fps: float
     oscillation: bool
+
+
+@dataclass(slots=True)
+class SpinnerState:
+    """Mutable state shared between the frontend interface and rendering engine."""
+    status_text: str

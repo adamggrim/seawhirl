@@ -43,7 +43,6 @@ seawhirl/
   │   ├── engine.py: The core rendering engine for the spinner
   │   ├── exceptions.py: Custom exceptions for the seawhirl package
   │   ├── presets.py: Preset configurations
-  │   ├── state.py: State management for the spinner
   │   ├── terminal.py: Terminal interaction and cursor manipulation utilities
   │   └── utils.py: Utility functions for the package
   ├── _lib/
