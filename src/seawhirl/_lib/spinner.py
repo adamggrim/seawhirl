@@ -7,8 +7,7 @@ from collections.abc import Callable
 from enum import Enum
 from functools import wraps
 from typing import TextIO, TypeVar, ParamSpec, cast
-
-from seawhirl._core.config import SpinnerConfig
+from seawhirl._core.config import SpinnerConfig, SpinnerState
 from seawhirl._core.terminal import (
     TerminalLifecycle,
     enable_windows_vt_processing,
@@ -22,7 +21,6 @@ from seawhirl._core.backends import (
 )
 from seawhirl._core.easing import EasingStrategy, Logarithmic
 from seawhirl._core.exceptions import InvalidPresetError
-from seawhirl._core.state import SpinnerState
 
 
 class Backend(Enum):
@@ -143,9 +141,7 @@ class Spinner:
             self.lifecycle.__exit__(None, None, None)
 
     def update(self, status_text: str) -> None:
-        """
-        Rewrite the status text next to the spinner.
-        """
+        """Rewrite the status text next to the spinner."""
         self.state.status_text = status_text
 
     async def __aenter__(self) -> 'Spinner':

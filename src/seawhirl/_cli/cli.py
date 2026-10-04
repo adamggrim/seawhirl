@@ -3,7 +3,7 @@ import shutil
 import sys
 import time
 
-from seawhirl._core.easing import get_easing_strategy
+from seawhirl._core.easing import EASING_REGISTRY, get_easing_strategy
 from seawhirl._core.presets import PRESETS
 from seawhirl._lib.spinner import Spinner
 
@@ -73,15 +73,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         '--easing',
-        choices=[
-            'logarithmic',
-            'log',
-            'sinusoidal',
-            'sin',
-            'sine',
-            'spring',
-            'inertial'
-        ],
+        choices=list(EASING_REGISTRY),
         default='logarithmic',
         metavar='<curve>',
         help="easing curve ('logarithmic', 'sinusoidal', 'spring', 'inertial')"

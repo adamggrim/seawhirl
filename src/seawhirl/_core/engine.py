@@ -1,13 +1,11 @@
 import random
-import regex
 import shutil
 import time
 
-from seawhirl._core.config import SpinnerConfig
+from seawhirl._core.config import SpinnerConfig, SpinnerState
 from seawhirl._core.easing import EasingStrategy
-from seawhirl._core.state import SpinnerState
 from seawhirl._core.terminal import ANSI_MOVE_COLUMN
-from seawhirl._core.utils import get_visual_width
+from seawhirl._core.utils import get_visual_width, iter_grapheme_widths
 
 DEFAULT_TERMINAL_SIZE = (80, 24)
 
@@ -55,27 +53,25 @@ def _truncate_text(text: str, max_width: int) -> str:
     """
     if max_width <= 0:
         return ''
-    if get_visual_width(text) <= max_width:
+
+    graphemes = iter_grapheme_widths(text)
+    if sum(w for _, w in graphemes) <= max_width:
         return text
     if max_width <= 3:
         return '.' * max_width
 
-    truncated_text = ''
+    clusters: list[str] = []
     current_width = 0
     target_width = max_width - 3
 
-    # Ensure complex emojis remain intact.
-    graphemes = regex.findall(r'\X', text)
-
-    for cluster in graphemes:
-        cluster_width = get_visual_width(cluster)
+    for cluster, cluster_width in graphemes:
         if current_width + cluster_width > target_width:
-            truncated_text += '...'
+            clusters.append('...')
             break
-        truncated_text += cluster
+        clusters.append(cluster)
         current_width += cluster_width
 
-    return truncated_text
+    return ''.join(clusters)
 
 
 class RenderEngine:

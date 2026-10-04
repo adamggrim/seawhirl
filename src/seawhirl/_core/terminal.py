@@ -75,8 +75,7 @@ class TerminalLifecycle:
         self.handle_signals = handle_signals
         self.lock = lock or threading.Lock()
         self._original_stdout: TextIO | None = None
-        self._sigint_handler: Any = None
-        self._sigterm_handler: Any = None
+        self._original_signals: dict[signal.Signals, Any] = {}
 
     def __enter__(self) -> 'TerminalLifecycle':
         if not self.disabled:
@@ -113,17 +112,13 @@ class TerminalLifecycle:
             sys.stdout = StreamProxy(sys.stdout, lock=self.lock)
 
     def _register_signal_handlers(self) -> None:
+        default_handlers = (signal.SIG_DFL, signal.default_int_handler)
         try:
-            self._sigint_handler = signal.getsignal(signal.SIGINT)
-            self._sigterm_handler = signal.getsignal(signal.SIGTERM)
-
-            if self._sigint_handler in (
-                signal.SIG_DFL,
-                signal.default_int_handler
-            ):
-                signal.signal(signal.SIGINT, self._handle_signal)
-            if self._sigterm_handler == signal.SIG_DFL:
-                signal.signal(signal.SIGTERM, self._handle_signal)
+            for sig in (signal.SIGINT, signal.SIGTERM):
+                orig = signal.getsignal(sig)
+                self._original_signals[sig] = orig
+                if orig in default_handlers:
+                    signal.signal(sig, self._handle_signal)
         except ValueError:
             pass
 
@@ -133,12 +128,7 @@ class TerminalLifecycle:
         frame: types.FrameType | None
     ) -> None:
         self._cleanup()
-
-        original_handler = (
-            self._sigint_handler
-            if signum == signal.SIGINT
-            else self._sigterm_handler
-        )
+        original_handler = self._original_signals.get(signal.Signals(signum))
 
         if callable(original_handler):
             original_handler(signum, frame)
@@ -150,10 +140,8 @@ class TerminalLifecycle:
         if self._original_stdout is not None:
             sys.stdout = self._original_stdout
         try:
-            if self._sigint_handler is not None:
-                signal.signal(signal.SIGINT, self._sigint_handler)
-            if self._sigterm_handler is not None:
-                signal.signal(signal.SIGTERM, self._sigterm_handler)
+            for sig, handler in self._original_signals.items():
+                signal.signal(sig, handler)
         except ValueError:
             pass
 
