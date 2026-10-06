@@ -104,13 +104,13 @@ class ThreadBackend(SpinnerBackend):
         engine = RenderEngine(self.config, self.state)
 
         try:
-            next_tick = time.time()
+            next_tick = time.perf_counter()
             while not self._stop_event.is_set():
-                if (rendered := engine.tick(time.time())) is not None:
+                if (rendered := engine.tick(time.perf_counter())) is not None:
                     self._write_frame(rendered)
 
                 next_tick += self.config.loop_delay
-                time.sleep(max(0.0, next_tick - time.time()))
+                time.sleep(max(0.0, next_tick - time.perf_counter()))
         except KeyboardInterrupt:
             pass
         except Exception as e:
@@ -171,11 +171,11 @@ class AsyncBackend(SpinnerBackend):
 
         try:
             while True:
-                now = time.time()
+                now = time.perf_counter()
                 if (rendered := engine.tick(now)) is not None:
                     self._write_frame(rendered)
 
-                work_time = time.time() - now
+                work_time = time.perf_counter() - now
                 await asyncio.sleep(
                     max(0.0, self.config.loop_delay - work_time)
                 )

@@ -103,7 +103,7 @@ class RenderEngine:
         self.current_status_frame = 0.0
 
         self.prev_rendered_frame = ''
-        self.start_time = time.time()
+        self.start_time = time.perf_counter()
         self.prev_update_time = self.start_time
         self._text_cache: tuple[tuple[str, int] | None, str] = (None, '')
 
