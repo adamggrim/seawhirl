@@ -25,6 +25,11 @@ Animate custom frames:
 python -m seawhirl --custom "🌑,🌒,🌓,🌔,🌕,🌖,🌗,🌘" --accel 1.5
 ```
 
+Add colors:
+```bash
+python -m seawhirl --easing sine --oscillation --color "cyan,magenta"
+```
+
 Use `python -m seawhirl --help` to see all available configuration flags.
 
 ## Structure
@@ -72,13 +77,17 @@ Add a spinner to scripts with either a context manager or a decorator.
 
 ### 1. Context manager
 
-Wrap specific blocks of code using the `with` statement.
+Wrap specific blocks of code using the `with` statement. Pass a single color or two-color tuple to interpolate colors along the easing curve.
 
 ```python
 import time
 from seawhirl import Spinner
 
-with Spinner(accel_secs=6.0, status_text='Whirl up sea'):
+with Spinner(
+    accel_secs=6.0,
+    color=('cyan', 'magenta'),
+    status_text='Whirl up sea...'
+):
     time.sleep(6)
 ```
 
@@ -92,7 +101,8 @@ from seawhirl import Spinner, Spring
 
 spinner = Spinner(
     easing=Spring(tension=6.0, friction=8.0),
-    oscillation=True
+    oscillation=True,
+    color=('#0055ff', '#00ffaa')
 )
 
 @spinner

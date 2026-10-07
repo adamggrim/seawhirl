@@ -90,6 +90,15 @@ def _build_parser() -> argparse.ArgumentParser:
         action='store_true',
         help='pulse the animation speed back and forth'
     )
+    parser.add_argument(
+        '--color',
+        default=None,
+        metavar='<str>',
+        help=(
+            'color or gradient pair '
+            "('cyan', 'cyan,magenta', '#00ffcc,#ff0066')"
+        ),
+    )
 
     return parser
 
@@ -112,6 +121,7 @@ def main() -> None:
             easing=easing_strategy,
             status_text=args.status_text,
             oscillation=args.oscillation,
+            color=args.color,
         )
         with spinner:
             time.sleep(args.duration)

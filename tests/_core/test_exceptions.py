@@ -2,6 +2,7 @@ import pytest
 
 from seawhirl._core.exceptions import (
     BackendStartupError,
+    InvalidColorError,
     InvalidPresetError,
     SeawhirlError,
 )
@@ -13,6 +14,10 @@ def test_seawhirl_error_base() -> None:
 
 def test_backend_startup_error_inheritance() -> None:
     assert issubclass(BackendStartupError, SeawhirlError)
+
+
+def test_invalid_color_error_inheritance() -> None:
+    assert issubclass(InvalidColorError, SeawhirlError)
 
 
 def test_invalid_preset_error_inheritance() -> None:

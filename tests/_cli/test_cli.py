@@ -67,6 +67,7 @@ def test_main_default_execution(
     assert kwargs['frames'] == PRESETS['whirl']
     assert kwargs['status_text'] == ''
     assert kwargs['oscillation'] is False
+    assert kwargs['color'] is None
 
     mock_spinner_instance.__enter__.assert_called_once()
     mock_sleep.assert_called_once_with(5.0)

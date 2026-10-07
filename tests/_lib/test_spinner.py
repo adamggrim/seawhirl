@@ -61,12 +61,14 @@ def test_manual_start_and_stop(
     mock_stop.assert_called_once()
 
 
-def test_update_status_text() -> None:
-    spinner = Spinner(status_text='Initial')
+def test_update_status_text_and_color() -> None:
+    spinner = Spinner(status_text='Initial', color='cyan')
     assert spinner.state.status_text == 'Initial'
+    assert spinner.state.colors == ((0, 255, 255), (0, 255, 255))
 
-    spinner.update('Updated')
+    spinner.update('Updated', color=('cyan', 'magenta'))
     assert spinner.state.status_text == 'Updated'
+    assert spinner.state.colors == ((0, 255, 255), (255, 0, 255))
 
 
 @patch.object(ThreadBackend, '__enter__')

@@ -1,6 +1,7 @@
 """Spinner configuration objects."""
 
 from dataclasses import dataclass
+from seawhirl._core.colors import RGB
 from seawhirl._core.easing import EasingStrategy
 
 __all__ = ['SpinnerConfig', 'SpinnerState']
@@ -22,5 +23,9 @@ class SpinnerConfig:
 
 @dataclass(slots=True)
 class SpinnerState:
-    """Mutable state shared between the frontend interface and rendering engine."""
+    """
+    Mutable state shared between the frontend interface and rendering
+    engine.
+    """
     status_text: str
+    colors: tuple[RGB, RGB] | None = None

@@ -2,12 +2,34 @@ import random
 import shutil
 import time
 
+from seawhirl._core.colors import interpolate_ansi_color
 from seawhirl._core.config import SpinnerConfig, SpinnerState
 from seawhirl._core.easing import EasingStrategy
-from seawhirl._core.terminal import ANSI_MOVE_COLUMN
+from seawhirl._core.terminal import ANSI_MOVE_COLUMN, ANSI_RESET_COLOR
 from seawhirl._core.utils import get_visual_width, iter_grapheme_widths
 
 DEFAULT_TERMINAL_SIZE = (80, 24)
+
+
+def _calculate_multiplier(
+    elapsed_total: float,
+    accel_secs: float,
+    easing: EasingStrategy,
+    oscillation: bool = False
+) -> float:
+    """
+    Calculate the normalized easing multiplier for the current tick.
+    """
+    if accel_secs <= 0 or (not oscillation and elapsed_total >= accel_secs):
+        return 1.0
+
+    if oscillation:
+        cycle = (elapsed_total / accel_secs) % 2.0
+        progress = cycle if cycle <= 1.0 else 2.0 - cycle
+    else:
+        progress = elapsed_total / accel_secs
+
+    return easing.calculate_multiplier(progress)
 
 
 def _calculate_current_fps(
@@ -33,17 +55,12 @@ def _calculate_current_fps(
     Returns:
         float: The calculated frames per second for this tick.
     """
-    if accel_secs <= 0 or (not oscillation and elapsed_total >= accel_secs):
-        return peak_fps
-
-    if oscillation:
-        cycle = (elapsed_total / accel_secs) % 2.0
-        progress = cycle if cycle <= 1.0 else 2.0 - cycle
-    else:
-        progress = elapsed_total / accel_secs
-
-    multiplier = easing.calculate_multiplier(progress)
-
+    multiplier = _calculate_multiplier(
+        elapsed_total,
+        accel_secs,
+        easing,
+        oscillation
+    )
     return initial_fps + (peak_fps - initial_fps) * multiplier
 
 
@@ -122,13 +139,16 @@ class RenderEngine:
         elapsed_since_last = now - self.prev_update_time
         self.prev_update_time = now
 
-        current_fps = _calculate_current_fps(
+        multiplier = _calculate_multiplier(
             elapsed_total,
             self.config.accel_secs,
-            self.config.initial_fps,
-            self.config.peak_animation_fps,
             self.config.easing,
             self.config.oscillation
+        )
+        current_fps = (
+            self.config.initial_fps
+            + (self.config.peak_animation_fps - self.config.initial_fps)
+            * multiplier
         )
 
         self.current_frame += current_fps * elapsed_since_last
@@ -151,6 +171,16 @@ class RenderEngine:
         if get_visual_width(icon) > console_width:
             rendered_frame = ''
         else:
+            if self.state.colors is not None:
+                ansi_color = interpolate_ansi_color(
+                    self.state.colors[0],
+                    self.state.colors[1],
+                    multiplier
+                )
+                styled_icon = f'{ansi_color}{icon}{ANSI_RESET_COLOR}'
+            else:
+                styled_icon = icon
+
             text = self.state.status_text
             suffix = (
                 self.config.status_frames[status_frame_idx]
@@ -175,12 +205,12 @@ class RenderEngine:
                     self._text_cache = (cache_key, full_text)
 
                 rendered_frame = (
-                    f'{icon}'
+                    f'{styled_icon}'
                     f'{ANSI_MOVE_COLUMN.format(col=self.max_frame_width + 2)}'
                     f'{full_text}'
                 )
             else:
-                rendered_frame = icon
+                rendered_frame = styled_icon
 
         if rendered_frame != self.prev_rendered_frame:
             self.prev_rendered_frame = rendered_frame

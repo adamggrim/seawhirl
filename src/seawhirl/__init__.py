@@ -9,6 +9,7 @@ from seawhirl._core.easing import (
 )
 from seawhirl._core.exceptions import (
     BackendStartupError,
+    InvalidColorError,
     InvalidPresetError,
     SeawhirlError
 )
@@ -20,6 +21,7 @@ __all__ = [
     'BackendStartupError',
     'EasingStrategy',
     'Inertial',
+    'InvalidColorError',
     'InvalidPresetError',
     'Logarithmic',
     'PRESETS',

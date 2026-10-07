@@ -19,6 +19,7 @@ from seawhirl._core.backends import (
     SpinnerBackend,
     ThreadBackend
 )
+from seawhirl._core.colors import ColorInput, parse_color_spec
 from seawhirl._core.easing import EasingStrategy, Logarithmic
 from seawhirl._core.exceptions import InvalidPresetError
 
@@ -66,6 +67,7 @@ class Spinner:
         status_frames: list[str] | None = None,
         status_fps: float = SpinnerDefaults.STATUS_FPS,
         oscillation: bool = False,
+        color: ColorInput | None = None,
         handle_signals: bool = True
     ) -> None:
         self.stream = stream or sys.stdout
@@ -94,7 +96,11 @@ class Spinner:
         self.easing = easing or Logarithmic()
         loop_delay = 1.0 / peak_render_fps
 
-        self.state = SpinnerState(status_text=status_text)
+        parsed_colors = parse_color_spec(color)
+        self.state = SpinnerState(
+            status_text=status_text,
+            colors=parsed_colors
+        )
         self.lifecycle = TerminalLifecycle(self.stream, self._disabled, handle_signals)
 
         self.status_frames = (
@@ -147,9 +153,16 @@ class Spinner:
             finally:
                 self.lifecycle.__exit__(None, None, None)
 
-    def update(self, status_text: str) -> None:
-        """Rewrite the status text next to the spinner."""
-        self.state.status_text = status_text
+    def update(
+        self,
+        status_text: str | None = None,
+        color: ColorInput | None = None
+    ) -> None:
+        """Rewrite the status text or color of the spinner."""
+        if status_text is not None:
+            self.state.status_text = status_text
+        if color is not None:
+            self.state.colors = parse_color_spec(color)
 
     async def __aenter__(self) -> 'Spinner':
         if self._nesting_level == 0:

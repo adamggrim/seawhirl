@@ -8,6 +8,7 @@ from seawhirl._core.easing import (
 )
 from seawhirl._core.exceptions import (
     BackendStartupError,
+    InvalidColorError,
     InvalidPresetError,
     SeawhirlError,
 )
@@ -21,6 +22,7 @@ def test_all_exports() -> None:
         'BackendStartupError',
         'EasingStrategy',
         'Inertial',
+        'InvalidColorError',
         'InvalidPresetError',
         'Logarithmic',
         'PRESETS',
@@ -39,6 +41,7 @@ def test_imports_match_origins() -> None:
     assert seawhirl.BackendStartupError is BackendStartupError
     assert seawhirl.EasingStrategy is EasingStrategy
     assert seawhirl.Inertial is Inertial
+    assert seawhirl.InvalidColorError is InvalidColorError
     assert seawhirl.InvalidPresetError is InvalidPresetError
     assert seawhirl.Logarithmic is Logarithmic
     assert seawhirl.PRESETS is PRESETS
