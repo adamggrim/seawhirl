@@ -149,7 +149,7 @@ class TerminalLifecycle:
 def enable_windows_vt_processing() -> None:
     if platform.system() == 'Windows':
         import ctypes
-        kernel32 = ctypes.windll.kernel32
+        kernel32 = getattr(ctypes, 'windll').kernel32
         handle = kernel32.GetStdHandle(STD_OUTPUT_HANDLE)
         mode = ctypes.c_uint32()
         kernel32.GetConsoleMode(handle, ctypes.byref(mode))
