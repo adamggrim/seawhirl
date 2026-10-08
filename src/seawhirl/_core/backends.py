@@ -121,6 +121,8 @@ class ThreadBackend(SpinnerBackend):
 
     def start(self) -> None:
         """Initialize the thread loop safely."""
+        if self._thread is not None and self._thread.is_alive():
+            return
         self._stop_event.clear()
         self._thread = threading.Thread(
             target=self._sync_render_loop,
@@ -163,9 +165,24 @@ class AsyncBackend(SpinnerBackend):
         """No-op for synchronous exit to accommodate strict typing."""
         pass
 
+    async def _awrite_frame(self, frame: str = '') -> None:
+        """
+        Write a frame without blocking the event loop.
+        """
+        if self._lock.acquire(blocking=False):
+            try:
+                self.stream.write(
+                    f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}{frame}'
+                )
+                self.stream.flush()
+            finally:
+                self._lock.release()
+        else:
+            await asyncio.to_thread(self._write_frame, frame)
+
     async def _async_render_loop(self) -> None:
         """
-        Internal asynchronous polling loop mapping engine state to IO.
+        Internal asynchronous polling loop mapping engine state to I/O.
         """
         engine = RenderEngine(self.config, self.state)
 
@@ -173,7 +190,7 @@ class AsyncBackend(SpinnerBackend):
             while True:
                 now = time.perf_counter()
                 if (rendered := engine.tick(now)) is not None:
-                    self._write_frame(rendered)
+                    await self._awrite_frame(rendered)
 
                 work_time = time.perf_counter() - now
                 await asyncio.sleep(
@@ -186,14 +203,17 @@ class AsyncBackend(SpinnerBackend):
 
     async def astart(self) -> None:
         """Schedule the worker coroutine in the active event loop."""
+        if self._async_task is not None and not self._async_task.done():
+            return
         self._async_task = asyncio.create_task(self._async_render_loop())
 
     async def astop(self) -> None:
-        """Cancel the scheduled execution trace."""
-        if self._async_task:
-            self._async_task.cancel()
+        """Cancel the background rendering task."""
+        if self._async_task is not None:
+            task = self._async_task
+            self._async_task = None
+            task.cancel()
             try:
-                await self._async_task
+                await task
             except asyncio.CancelledError:
                 pass
-            self._async_task = None
