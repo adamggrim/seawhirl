@@ -6,7 +6,7 @@ import types
 from collections.abc import Callable
 from enum import Enum
 from functools import wraps
-from typing import TextIO, TypeVar, ParamSpec, cast
+from typing import Any, TextIO, TypeVar, ParamSpec, cast
 from seawhirl._core.config import SpinnerConfig, SpinnerState
 from seawhirl._core.terminal import (
     TerminalLifecycle,
@@ -101,7 +101,11 @@ class Spinner:
             status_text=status_text,
             colors=parsed_colors
         )
-        self.lifecycle = TerminalLifecycle(self.stream, self._disabled, handle_signals)
+        self.lifecycle = TerminalLifecycle(
+            self.stream,
+            self._disabled,
+            handle_signals
+        )
 
         self.status_frames = (
             status_frames
@@ -215,7 +219,7 @@ class Spinner:
     def __call__(self, func: Callable[P, T]) -> Callable[P, T]:
         if inspect.iscoroutinefunction(func):
             @wraps(func)
-            async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+            async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> Any:
                 async with self:
                     return await func(*args, **kwargs)
             return cast(Callable[P, T], async_wrapper)
