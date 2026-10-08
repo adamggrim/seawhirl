@@ -14,7 +14,7 @@ from seawhirl._core.exceptions import (
     SeawhirlError
 )
 from seawhirl._core.presets import PRESETS
-from seawhirl._lib.spinner import Spinner, Backend
+from seawhirl._lib.spinner import Backend, Spinner
 
 __all__ = [
     'Backend',

@@ -6,22 +6,28 @@ import types
 from collections.abc import Callable
 from enum import Enum
 from functools import wraps
-from typing import Any, TextIO, TypeVar, ParamSpec, cast
-from seawhirl._core.config import SpinnerConfig, SpinnerState
-from seawhirl._core.terminal import (
-    TerminalLifecycle,
-    enable_windows_vt_processing,
-    is_supported_terminal
-)
-from seawhirl._core.presets import PRESETS
+from typing import Any, ParamSpec, TextIO, TypeVar, cast
+
 from seawhirl._core.backends import (
     AsyncBackend,
     SpinnerBackend,
     ThreadBackend
 )
 from seawhirl._core.colors import ColorInput, parse_color_spec
+from seawhirl._core.config import SpinnerConfig, SpinnerState
 from seawhirl._core.easing import EasingStrategy, Logarithmic
 from seawhirl._core.exceptions import InvalidPresetError
+from seawhirl._core.presets import PRESETS
+from seawhirl._core.terminal import (
+    TerminalLifecycle,
+    enable_windows_vt_processing,
+    is_supported_terminal
+)
+
+__all__ = ['Backend', 'Spinner']
+
+P = ParamSpec('P')
+T = TypeVar('T')
 
 
 class Backend(Enum):
@@ -39,12 +45,6 @@ class SpinnerDefaults:
     PRESET: str = 'whirl'
     STATUS_FPS: float = 2.0
     STATUS_FRAMES: list[str] = []
-
-
-__all__ = ['Spinner', 'Backend']
-
-P = ParamSpec('P')
-T = TypeVar('T')
 
 
 class Spinner:
