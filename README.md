@@ -74,7 +74,6 @@ Follow these steps to install `seawhirl`:
     ```bash
     pip install git+https://github.com/adamggrim/seawhirl.git
     ```
-    *Note: On macOS/Linux, you may need to use `pip3` instead of `pip`*.
 
 ## Usage
 
