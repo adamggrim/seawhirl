@@ -28,4 +28,4 @@ class SpinnerState:
     engine.
     """
     status_text: str
-    colors: tuple[RGB, RGB] | None = None
+    colors: tuple[RGB, ...] | None = None
