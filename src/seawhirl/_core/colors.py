@@ -100,12 +100,13 @@ def parse_color_spec(color: ColorInput | None) -> tuple[RGB, ...] | None:
         return (rgb, rgb)
 
     if isinstance(color, Sequence):
-        if len(color) == 0:
+        color_seq = cast(Sequence[ColorSpec], color)
+        if len(color_seq) == 0:
             raise InvalidColorError('Color sequence cannot be empty.')
-        if len(color) == 1:
-            rgb = _parse_rgb(color[0])
+        if len(color_seq) == 1:
+            rgb = _parse_rgb(color_seq[0])
             return (rgb, rgb)
-        return tuple(_parse_rgb(c) for c in color)
+        return tuple(_parse_rgb(c) for c in color_seq)
 
     raise InvalidColorError(f"Invalid color specification: '{color}'")
 
