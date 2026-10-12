@@ -1,3 +1,5 @@
+"""Terminal interaction and cursor manipulation."""
+
 from __future__ import annotations
 
 import atexit
@@ -121,6 +123,8 @@ class TerminalLifecycle:
                 if orig in default_handlers:
                     signal.signal(sig, self._handle_signal)
         except ValueError:
+            # Bypass signal registration when not running in the main
+            # thread.
             pass
 
     def _handle_signal(

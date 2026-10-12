@@ -45,18 +45,20 @@ Use `python -m seawhirl --help` to see all available configuration flags.
 ```text
 seawhirl/
   ├── _cli/
-  │   └── cli.py: Command-line argument parsing
+  │  └── cli.py: Command-line argument parsing
   ├── _core/
-  │   ├── backends.py: Threading and asyncio backends for rendering
-  │   ├── config.py: Spinner configuration objects
-  │   ├── easing.py: Mathematical easing curves and physics
-  │   ├── engine.py: The core rendering engine for the spinner
-  │   ├── exceptions.py: Custom exceptions for the seawhirl package
-  │   ├── presets.py: Preset configurations
-  │   ├── terminal.py: Terminal interaction and cursor manipulation utilities
-  │   └── utils.py: Utility functions for the package
+  │  ├── backends.py: Threading and asyncio backends for rendering
+  |  ├── colors.py: Color parsing utilities
+  │  ├── config.py: Spinner configuration objects
+  │  ├── easing.py: Mathematical easing curves and physics
+  │  ├── engine.py: The core spinner rendering engine
+  │  ├── exceptions.py: Custom exceptions for spinners
+  |  ├── palette.py: Color palette definitions
+  │  ├── presets.py: Preset spinner configurations
+  │  ├── terminal.py: Terminal interaction and cursor manipulation
+  │  └── utils.py: Universal utility functions
   ├── _lib/
-  │   └── spinner.py: The main `Spinner` class, context manager and decorator
+  │  └── spinner.py: The main `Spinner` class, context manager and decorator
   ├── __init__.py: Exposes the public API
   ├── __main__.py: The entry point for the package
   └── py.typed: Marker file for PEP 561 typing support
@@ -77,11 +79,11 @@ Follow these steps to install `seawhirl`:
 
 ## Usage
 
-Add a spinner to scripts with either a context manager or a decorator.
+Add a spinner to scripts with either a context manager or decorator. Apply a custom array of colors that accelerates with the spinner.
 
 ### 1. Context manager
 
-Wrap specific blocks of code using the `with` statement. Pass a single color or two-color tuple to interpolate colors along the easing curve.
+Wrap specific blocks of code using the `with` statement.
 
 ```python
 import time
@@ -89,7 +91,6 @@ from seawhirl import Spinner
 
 with Spinner(
     accel_secs=6.0,
-    color=('cyan', 'magenta'),
     status_text='Whirl up sea...'
 ):
     time.sleep(6)
@@ -115,6 +116,36 @@ def process_data(filepath: str):
     return f'Processed {filepath}'
 
 result = process_data('data.csv')
+```
+
+### 3. Colors
+
+Monotonic curves (`Logarithmic`, `Inertial`) map an accelerating color sequence across the curve.
+
+Wave-based curves (`Sinusoidal`, `Spring`) support two modifier methods:
+
+**Normalized (default)**
+Moves through all color stops from trough to crest, then reverses direction from crest to trough.
+
+```python
+from seawhirl import Sinusoidal, Spinner
+
+spinner = Spinner(
+    easing=Sinusoidal().normalized(),
+    oscillation=True,
+    color=['#0055ff', '#00ffaa', '#ff0066']
+)
+```
+
+**Indexed**
+Moves from one color stop to the next from trough to crest, then moves to a new color stop at the next trough.
+
+```python
+spinner = Spinner(
+    easing=Sinusoidal().indexed(),
+    oscillation=True,
+    color=['#0055ff', '#00ffaa', '#ff0066']
+)
 ```
 
 ## License

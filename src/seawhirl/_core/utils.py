@@ -1,3 +1,5 @@
+"""Universal utility functions."""
+
 import regex
 from wcwidth import wcswidth
 

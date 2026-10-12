@@ -1,5 +1,6 @@
 """A Python package for accelerating CLI spinners."""
 
+from seawhirl._core.colors import register_color
 from seawhirl._core.easing import (
     EasingStrategy,
     Inertial,
@@ -28,5 +29,6 @@ __all__ = [
     'SeawhirlError',
     'Sinusoidal',
     'Spinner',
-    'Spring'
+    'Spring',
+    'register_color'
 ]

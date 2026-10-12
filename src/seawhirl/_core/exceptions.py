@@ -1,3 +1,5 @@
+"""Custom exceptions for spinners."""
+
 __all__ = [
     'BackendStartupError',
     'InvalidColorError',

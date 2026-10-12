@@ -1,3 +1,5 @@
+"""Threading and asyncio backends for rendering."""
+
 from __future__ import annotations
 
 import asyncio
