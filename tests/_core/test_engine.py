@@ -4,76 +4,29 @@ from unittest.mock import patch
 import pytest
 
 from seawhirl._core.config import SpinnerConfig, SpinnerState
-from seawhirl._core.easing import Logarithmic
+from seawhirl._core.easing import Logarithmic, Sinusoidal
 from seawhirl._core.engine import (
     RenderEngine,
-    _calculate_current_fps,
+    _calculate_color_index,
     _truncate_text,
 )
 from seawhirl._core.terminal import ANSI_MOVE_COLUMN
 
 
-def test_calculate_fps_no_oscillation_before_peak() -> None:
-    easing = Logarithmic()
-    fps = _calculate_current_fps(
-        elapsed_total=1.5,
-        accel_secs=3.0,
-        initial_fps=10.0,
-        peak_fps=60.0,
-        easing=easing,
-        oscillation=False
-    )
-
-    expected_multiplier = easing.calculate_multiplier(0.5)
-    expected_fps = 10.0 + (50.0 * expected_multiplier)
-
-    assert fps == pytest.approx(expected_fps)
-
-
-def test_calculate_fps_no_oscillation_after_peak() -> None:
-    fps = _calculate_current_fps(
-        elapsed_total=5.0,
-        accel_secs=3.0,
-        initial_fps=10.0,
-        peak_fps=60.0,
-        easing=Logarithmic(),
-        oscillation=False
-    )
-    assert fps == 60.0
-
-
-def test_calculate_fps_with_oscillation() -> None:
-    easing = Logarithmic()
-    fps = _calculate_current_fps(
-        elapsed_total=4.5,
-        accel_secs=3.0,
-        initial_fps=10.0,
-        peak_fps=60.0,
-        easing=easing,
-        oscillation=True
-    )
-
-    expected_multiplier = easing.calculate_multiplier(0.5)
-    expected_fps = 10.0 + (50.0 * expected_multiplier)
-
-    assert fps == pytest.approx(expected_fps)
-
-
-def test_truncate_text_short() -> None:
-    assert _truncate_text('Loading', 20) == 'Loading'
-
-
-def test_truncate_text_long() -> None:
-    assert _truncate_text(
-        'splash your great pines / on our rocks', 26
-    ) == 'splash your great pines...'
-
-
-def test_truncate_text_with_emojis() -> None:
-    text = 'H.👨‍👩‍👧‍👦D.'
-    truncated = _truncate_text(text, 4)
-    assert truncated == 'H...'
-
+@pytest.mark.parametrize(
+    ('text', 'max_width', 'expected'),
+    [
+    ('Loading', 20, 'Loading'),
+    (
+        'splash your great pines / on our rocks',
+        26,
+        'splash your great pines...',
+    ),
+    ('H.👨‍👩‍👧‍👦D.', 4, 'H...'),
+]
+)
+def test_truncate_text(text: str, max_width: int, expected: str) -> None:
+    assert _truncate_text(text, max_width) == expected
 
 @pytest.fixture
 def engine_config() -> SpinnerConfig:
@@ -177,3 +130,44 @@ def test_render_engine_no_status_text(
     frame = engine.tick(engine.start_time)
 
     assert frame == '1'
+
+
+@pytest.mark.parametrize(
+    ('current_val', 'expected'),
+    [
+        (0.0, 0.0),
+        (1.0, 0.5),
+        (2.0, 1.0),
+        (3.0, 1.5),
+        (4.0, 2.0),
+    ],
+)
+def test_calculate_color_index_oscillation(current_val: float, expected: float) -> None:
+    easing = Sinusoidal().indexed()
+    result = _calculate_color_index(current_val, 2.0, easing, oscillation=True)
+    assert result == pytest.approx(expected)
+
+
+@patch('seawhirl._core.engine.shutil.get_terminal_size')
+def test_render_engine_indexed_color_mode(mock_terminal_size) -> None:
+    mock_terminal_size.return_value = os.terminal_size((80, 24))
+    config = SpinnerConfig(
+        accel_secs=2.0,
+        initial_fps=10.0,
+        peak_animation_fps=10.0,
+        loop_delay=0.1,
+        frames=['1'],
+        easing=Sinusoidal().indexed(),
+        status_frames=[],
+        status_fps=10.0,
+        oscillation=True,
+    )
+    state = SpinnerState(
+        status_text='',
+        colors=((10, 0, 0), (20, 0, 0), (30, 0, 0)),
+    )
+    engine = RenderEngine(config, state)
+
+    assert engine.tick(engine.start_time) == '\033[38;2;10;0;0m1\033[0m'
+    assert engine.tick(engine.start_time + 2.0) == '\033[38;2;20;0;0m1\033[0m'
+    assert engine.tick(engine.start_time + 4.0) == '\033[38;2;30;0;0m1\033[0m'

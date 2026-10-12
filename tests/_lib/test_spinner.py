@@ -71,29 +71,29 @@ def test_update_status_text_and_color() -> None:
     assert spinner.state.colors == ((0, 255, 255), (255, 0, 255))
 
 
-@patch.object(ThreadBackend, '__enter__')
-@patch.object(ThreadBackend, '__exit__')
+@patch.object(ThreadBackend, 'start')
+@patch.object(ThreadBackend, 'stop')
 @patch('seawhirl._lib.spinner.is_supported_terminal', return_value=True)
 def test_sync_context_manager(
     _mock_is_supported: MagicMock,
-    mock_exit: MagicMock,
-    mock_enter: MagicMock
+    mock_stop: MagicMock,
+    mock_start: MagicMock
 ) -> None:
     spinner = Spinner()
 
     with spinner:
-        mock_enter.assert_called_once()
+        mock_start.assert_called_once()
 
-    mock_exit.assert_called_once()
+    mock_stop.assert_called_once()
 
 
-@patch.object(ThreadBackend, '__enter__')
-@patch.object(ThreadBackend, '__exit__')
+@patch.object(ThreadBackend, 'start')
+@patch.object(ThreadBackend, 'stop')
 @patch('seawhirl._lib.spinner.is_supported_terminal', return_value=True)
 def test_sync_decorator(
     _mock_is_supported: MagicMock,
-    mock_exit: MagicMock,
-    mock_enter: MagicMock
+    mock_stop: MagicMock,
+    mock_start: MagicMock
 ) -> None:
     spinner = Spinner()
 
@@ -104,35 +104,35 @@ def test_sync_decorator(
     result = mock_function()
 
     assert result == 'success'
-    mock_enter.assert_called_once()
-    mock_exit.assert_called_once()
+    mock_start.assert_called_once()
+    mock_stop.assert_called_once()
 
 
 @pytest.mark.asyncio
-@patch.object(AsyncBackend, '__aenter__', new_callable=AsyncMock)
-@patch.object(AsyncBackend, '__aexit__', new_callable=AsyncMock)
+@patch.object(AsyncBackend, 'astart', new_callable=AsyncMock)
+@patch.object(AsyncBackend, 'astop', new_callable=AsyncMock)
 @patch('seawhirl._lib.spinner.is_supported_terminal', return_value=True)
 async def test_async_context_manager(
     _mock_is_supported: MagicMock,
-    mock_aexit: AsyncMock,
-    mock_aenter: AsyncMock
+    mock_astop: AsyncMock,
+    mock_astart: AsyncMock
 ) -> None:
     spinner = Spinner(backend=Backend.ASYNC)
 
     async with spinner:
-        mock_aenter.assert_awaited_once()
+        mock_astart.assert_awaited_once()
 
-    mock_aexit.assert_awaited_once()
+    mock_astop.assert_awaited_once()
 
 
 @pytest.mark.asyncio
-@patch.object(AsyncBackend, '__aenter__', new_callable=AsyncMock)
-@patch.object(AsyncBackend, '__aexit__', new_callable=AsyncMock)
+@patch.object(AsyncBackend, 'astart', new_callable=AsyncMock)
+@patch.object(AsyncBackend, 'astop', new_callable=AsyncMock)
 @patch('seawhirl._lib.spinner.is_supported_terminal', return_value=True)
 async def test_async_decorator(
     _mock_is_supported: MagicMock,
-    mock_aexit: AsyncMock,
-    mock_aenter: AsyncMock
+    mock_astop: AsyncMock,
+    mock_astart: AsyncMock
 ) -> None:
     spinner = Spinner(backend=Backend.ASYNC)
 
@@ -144,5 +144,5 @@ async def test_async_decorator(
     result = await mock_async_function()
 
     assert result == 42
-    mock_aenter.assert_awaited_once()
-    mock_aexit.assert_awaited_once()
+    mock_astart.assert_awaited_once()
+    mock_astop.assert_awaited_once()

@@ -2,6 +2,7 @@ import math
 import pytest
 
 from seawhirl._core.easing import (
+    ColorMode,
     EASING_REGISTRY,
     Inertial,
     Logarithmic,
@@ -47,6 +48,25 @@ class TestSinusoidal:
     def test_curve_points(self, progress: float, expected: float) -> None:
         easing = Sinusoidal()
         assert easing.calculate_multiplier(progress) == pytest.approx(expected)
+
+    def test_color_mode_modifiers(self) -> None:
+        default_sin = Sinusoidal()
+        assert default_sin.color_mode is ColorMode.NORMALIZED
+
+        indexed_sin = default_sin.indexed()
+        assert indexed_sin.color_mode is ColorMode.INDEXED
+        assert indexed_sin.normalized().color_mode is ColorMode.NORMALIZED
+
+        indexed_spring = Spring(tension=4.0, friction=8.0).indexed()
+        assert indexed_spring.color_mode is ColorMode.INDEXED
+        assert indexed_spring.tension == 4.0
+        assert indexed_spring.friction == 8.0
+        assert indexed_spring.normalized().color_mode is ColorMode.NORMALIZED
+
+        assert not hasattr(Logarithmic(), 'indexed')
+        assert not hasattr(Logarithmic(), 'normalized')
+        assert not hasattr(Inertial(), 'indexed')
+        assert not hasattr(Inertial(), 'normalized')
 
 
 class TestSpring:

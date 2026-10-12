@@ -12,24 +12,26 @@ def test_seawhirl_error_base() -> None:
     assert issubclass(SeawhirlError, Exception)
 
 
-def test_backend_startup_error_inheritance() -> None:
-    assert issubclass(BackendStartupError, SeawhirlError)
+@pytest.mark.parametrize('exception_cls', [
+    BackendStartupError,
+    InvalidColorError,
+    InvalidPresetError,
+])
+def test_custom_exception_inheritance(exception_cls: type[Exception]) -> None:
+    assert issubclass(exception_cls, SeawhirlError)
 
 
-def test_invalid_color_error_inheritance() -> None:
-    assert issubclass(InvalidColorError, SeawhirlError)
-
-
-def test_invalid_preset_error_inheritance() -> None:
-    assert issubclass(InvalidPresetError, SeawhirlError)
-
-
-def test_exception_instantiation() -> None:
-    with pytest.raises(SeawhirlError, match='Base failure'):
-        raise SeawhirlError('Base failure')
-
-    with pytest.raises(BackendStartupError, match='Cannot start async loop'):
-        raise BackendStartupError('Cannot start async loop')
-
-    with pytest.raises(InvalidPresetError, match="Unknown style: 'nymph'"):
-        raise InvalidPresetError("Unknown style: 'nymph'")
+@pytest.mark.parametrize(
+    ('exception_cls', 'message'),
+    [
+        (SeawhirlError, 'Base failure'),
+        (BackendStartupError, 'Cannot start async loop'),
+        (InvalidPresetError, "Unknown style: 'nymph'"),
+    ],
+)
+def test_exception_instantiation(
+    exception_cls: type[Exception],
+    message: str
+) -> None:
+    with pytest.raises(exception_cls, match=message):
+        raise exception_cls(message)
