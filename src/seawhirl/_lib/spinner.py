@@ -138,7 +138,7 @@ class Spinner:
             )
 
     def start(self) -> None:
-        """Manually start the animation."""
+        """Manually start the synchronous animation."""
         if self._nesting_level == 0:
             self.lifecycle.__enter__()
             if not self._disabled:
@@ -146,7 +146,7 @@ class Spinner:
         self._nesting_level += 1
 
     def stop(self) -> None:
-        """Manually stop the animation and restore terminal state."""
+        """Manually stop the synchronous animation and restore terminal state."""
         if self._nesting_level <= 0:
             return
         self._nesting_level -= 1
@@ -154,6 +154,29 @@ class Spinner:
             try:
                 if not self._disabled:
                     self._worker.stop()
+            finally:
+                self.lifecycle.__exit__(None, None, None)
+
+    async def astart(self) -> None:
+        """Manually start the asynchronous animation."""
+        if self._nesting_level == 0:
+            self.lifecycle.__enter__()
+            if not self._disabled:
+                await self._worker.astart()
+        self._nesting_level += 1
+
+    async def astop(self) -> None:
+        """
+        Manually stop the asynchronous animation and restore terminal
+        state.
+        """
+        if self._nesting_level <= 0:
+            return
+        self._nesting_level -= 1
+        if self._nesting_level == 0:
+            try:
+                if not self._disabled:
+                    await self._worker.astop()
             finally:
                 self.lifecycle.__exit__(None, None, None)
 
@@ -169,52 +192,28 @@ class Spinner:
             self.state.colors = parse_color_spec(color)
 
     async def __aenter__(self) -> 'Spinner':
-        if self._nesting_level == 0:
-            self.lifecycle.__enter__()
-            if not self._disabled:
-                await self._worker.__aenter__()
-        self._nesting_level += 1
+        await self.astart()
         return self
 
     async def __aexit__(
         self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: types.TracebackType | None
+        _exc_type: type[BaseException] | None,
+        _exc_val: BaseException | None,
+        _exc_tb: types.TracebackType | None
     ) -> None:
-        if self._nesting_level <= 0:
-            return
-        self._nesting_level -= 1
-        if self._nesting_level == 0:
-            try:
-                if not self._disabled:
-                    await self._worker.__aexit__(exc_type, exc_val, exc_tb)
-            finally:
-                self.lifecycle.__exit__(exc_type, exc_val, exc_tb)
+        await self.astop()
 
     def __enter__(self) -> 'Spinner':
-        if self._nesting_level == 0:
-            self.lifecycle.__enter__()
-            if not self._disabled:
-                self._worker.__enter__()
-        self._nesting_level += 1
+        self.start()
         return self
 
     def __exit__(
         self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: types.TracebackType | None
+        _exc_type: type[BaseException] | None,
+        _exc_val: BaseException | None,
+        _exc_tb: types.TracebackType | None
     ) -> None:
-        if self._nesting_level <= 0:
-            return
-        self._nesting_level -= 1
-        if self._nesting_level == 0:
-            try:
-                if not self._disabled:
-                    self._worker.__exit__(exc_type, exc_val, exc_tb)
-            finally:
-                self.lifecycle.__exit__(exc_type, exc_val, exc_tb)
+        self.stop()
 
     def __call__(self, func: Callable[P, T]) -> Callable[P, T]:
         if inspect.iscoroutinefunction(func):
