@@ -1,33 +1,45 @@
-from typing import TypeAlias
+"""Color parsing utilities."""
+
+import math
+from collections.abc import Sequence
+from typing import TypeAlias, cast
 
 from seawhirl._core.exceptions import InvalidColorError
+from seawhirl._core.palette import COLOR_REGISTRY, RGB
 
 __all__ = [
+    'COLOR_REGISTRY',
     'ColorInput',
-    'RGB',
     'interpolate_ansi_color',
+    'interpolate_indexed_ansi_color',
     'parse_color_spec',
+    'register_color'
 ]
 
-RGB: TypeAlias = tuple[int, int, int]
 ColorSpec: TypeAlias = str | RGB
-ColorInput: TypeAlias = ColorSpec | tuple[ColorSpec, ColorSpec]
-
-NAMED_COLORS: dict[str, RGB] = {
-    'blue': (0, 120, 255),
-    'cyan': (0, 255, 255),
-    'gold': (255, 215, 0),
-    'green': (0, 255, 128),
-    'magenta': (255, 0, 255),
-    'orange': (255, 140, 0),
-    'purple': (160, 32, 240),
-    'red': (255, 60, 60),
-    'white': (255, 255, 255),
-    'yellow': (255, 220, 0),
-}
+ColorInput: TypeAlias = ColorSpec | Sequence[ColorSpec]
 
 
-def parse_rgb(color: ColorSpec) -> RGB:
+def _is_rgb_tuple(value: object) -> bool:
+    """Check if an object is a raw 3-integer tuple candidate for RGB."""
+    return (
+        isinstance(value, tuple)
+        and len(value) == 3
+        and all(isinstance(c, int) for c in value)
+    )
+
+
+def _lerp_ansi(start_rgb: RGB, end_rgb: RGB, t: float) -> str:
+    """
+    Format a linearly interpolated RGB pair as an ANSI escape sequence.
+    """
+    r = round(start_rgb[0] + (end_rgb[0] - start_rgb[0]) * t)
+    g = round(start_rgb[1] + (end_rgb[1] - start_rgb[1]) * t)
+    b = round(start_rgb[2] + (end_rgb[2] - start_rgb[2]) * t)
+    return f'\033[38;2;{r};{g};{b}m'
+
+
+def _parse_rgb(color: ColorSpec) -> RGB:
     """
     Parse a color name, 6-digit hex code or RGB tuple into an RGB tuple.
     """
@@ -42,8 +54,8 @@ def parse_rgb(color: ColorSpec) -> RGB:
         )
 
     clean = color.strip().lower()
-    if clean in NAMED_COLORS:
-        return NAMED_COLORS[clean]
+    if clean in COLOR_REGISTRY:
+        return COLOR_REGISTRY[clean]
 
     hex_str = clean.lstrip('#')
     if len(hex_str) == 6:
@@ -58,15 +70,15 @@ def parse_rgb(color: ColorSpec) -> RGB:
 
     raise InvalidColorError(
         f"Unknown color: '{color}'. Use a named color "
-        f"({list(NAMED_COLORS.keys())}), a 6-digit hex code ('#00ffcc'), "
+        f"({list(COLOR_REGISTRY.keys())}), a 6-digit hex code ('#00ffcc'), "
         'or an RGB tuple.'
     )
 
 
-def parse_color_spec(color: ColorInput | None) -> tuple[RGB, RGB] | None:
+def parse_color_spec(color: ColorInput | None) -> tuple[RGB, ...] | None:
     """
-    Normalize a single color or two-color gradient into a (start, end)
-    pair.
+    Normalize a single color, comma-separated string or sequence of
+    colors into a tuple of RGB stops.
     """
     if color is None:
         return None
@@ -74,35 +86,71 @@ def parse_color_spec(color: ColorInput | None) -> tuple[RGB, RGB] | None:
     if isinstance(color, str):
         if ',' in color:
             parts = [p.strip() for p in color.split(',')]
-            if len(parts) != 2 or not all(parts):
+            if len(parts) < 2 or not all(parts):
                 raise InvalidColorError(
-                    f"Gradient string must contain two colors: '{color}'"
+                    'Gradient string must contain at least two '
+                    f"non-empty colors: '{color}'"
                 )
-            return (parse_rgb(parts[0]), parse_rgb(parts[1]))
-        rgb = parse_rgb(color)
+            return tuple(_parse_rgb(p) for p in parts)
+        rgb = _parse_rgb(color)
         return (rgb, rgb)
 
-    if len(color) == 2:
-        first, second = color
-        return (parse_rgb(first), parse_rgb(second))
-
-    if len(color) == 3 and all(isinstance(c, int) for c in color):
-        rgb = parse_rgb(color)
+    if _is_rgb_tuple(color):
+        rgb = _parse_rgb(cast(RGB, color))
         return (rgb, rgb)
+
+    if isinstance(color, Sequence):
+        if len(color) == 0:
+            raise InvalidColorError('Color sequence cannot be empty.')
+        if len(color) == 1:
+            rgb = _parse_rgb(color[0])
+            return (rgb, rgb)
+        return tuple(_parse_rgb(c) for c in color)
 
     raise InvalidColorError(f"Invalid color specification: '{color}'")
 
 
 def interpolate_ansi_color(
-    start_rgb: RGB,
-    end_rgb: RGB,
+    colors: Sequence[RGB],
     multiplier: float
 ) -> str:
-    """
-    Interpolate between two RGB colors using the easing multiplier.
-    """
+    """Interpolate ANSI colors across RGB color stops."""
+    if not colors:
+        raise InvalidColorError('Provide at least one RGB color.')
+    if len(colors) == 1:
+        return _lerp_ansi(colors[0], colors[0], 0.0)
+
     t = max(0.0, min(1.0, multiplier))
-    r = round(start_rgb[0] + (end_rgb[0] - start_rgb[0]) * t)
-    g = round(start_rgb[1] + (end_rgb[1] - start_rgb[1]) * t)
-    b = round(start_rgb[2] + (end_rgb[2] - start_rgb[2]) * t)
-    return f'\033[38;2;{r};{g};{b}m'
+    segments = len(colors) - 1
+    scaled = t * segments
+    idx = min(int(scaled), segments - 1)
+    return _lerp_ansi(colors[idx], colors[idx + 1], scaled - idx)
+
+
+def interpolate_indexed_ansi_color(
+    colors: Sequence[RGB],
+    color_index: float
+) -> str:
+    """
+    Interpolate between adjacent RGB stops.
+
+    Integer values of `color_index` (0, 1, 2, ...) map directly to
+    `colors[i % len(colors)]`.
+    """
+    if not colors:
+        raise InvalidColorError('Provide at least one RGB color.')
+    if len(colors) == 1:
+        return _lerp_ansi(colors[0], colors[0], 0.0)
+
+    num_colors = len(colors)
+    clamped = max(0.0, color_index)
+    base_idx = math.floor(clamped)
+    return _lerp_ansi(
+        colors[base_idx % num_colors],
+        colors[(base_idx + 1) % num_colors],
+        clamped - base_idx
+    )
+
+def register_color(name: str, color: ColorSpec) -> None:
+    """Register a custom named color into the global registry."""
+    COLOR_REGISTRY[name.strip().lower()] = _parse_rgb(color)
