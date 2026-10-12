@@ -9,7 +9,7 @@ __all__ = ['SpinnerConfig', 'SpinnerState']
 
 @dataclass(slots=True, frozen=True)
 class SpinnerConfig:
-    """Immutable configuration passed through the rendering pipeline."""
+    """Immutable class for spinner configuration."""
     accel_secs: float
     initial_fps: float
     peak_animation_fps: float
@@ -23,8 +23,7 @@ class SpinnerConfig:
 
 @dataclass(slots=True)
 class SpinnerState:
-    """
-    Mutable state shared between the frontend interface and rendering
+    """Mutable class shared between the frontend interface and rendering
     engine.
     """
     status_text: str

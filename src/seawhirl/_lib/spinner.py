@@ -48,10 +48,9 @@ class SpinnerDefaults:
 
 
 class Spinner:
-    """
-    Entry point for creating terminal spinners.
+    """Entry point for making terminal spinners.
 
-    Acts as a decorator, context manager or manual controller.
+    Can act as a decorator, context manager or manual controller.
     """
     def __init__(
         self,
@@ -146,7 +145,9 @@ class Spinner:
         self._nesting_level += 1
 
     def stop(self) -> None:
-        """Manually stop the synchronous animation and restore terminal state."""
+        """Manually stop the synchronous animation and restore terminal 
+        state.
+        """
         if self._nesting_level <= 0:
             return
         self._nesting_level -= 1
@@ -166,8 +167,7 @@ class Spinner:
         self._nesting_level += 1
 
     async def astop(self) -> None:
-        """
-        Manually stop the asynchronous animation and restore terminal
+        """Manually stop the asynchronous animation and restore terminal
         state.
         """
         if self._nesting_level <= 0:

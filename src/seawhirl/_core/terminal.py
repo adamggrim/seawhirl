@@ -23,8 +23,8 @@ FATAL_SIGNAL_BASE = 128
 STD_OUTPUT_HANDLE = -11
 
 class StreamProxy:
-    """
-    Class for intercepting `print()` calls to prevent visual tearing.
+    """Class for intercepting `print()` calls to prevent visual 
+    tearing.
     """
     def __init__(
         self,
@@ -63,8 +63,8 @@ class StreamProxy:
 
 
 class TerminalLifecycle:
-    """
-    Context manager isolating all terminal mutations and signal hooks.
+    """Context manager to isolate terminal mutations and signal 
+    hooks.
     """
     def __init__(
         self,

@@ -24,8 +24,8 @@ def _calculate_multiplier(
     easing: EasingStrategy,
     oscillation: bool = False
 ) -> float:
-    """
-    Calculate the normalized easing multiplier for the current tick.
+    """Calculate the normalized easing multiplier for the current
+    tick.
     """
     if accel_secs <= 0 or (not oscillation and elapsed_total >= accel_secs):
         return 1.0
@@ -45,9 +45,8 @@ def _calculate_color_index(
     easing: EasingStrategy,
     oscillation: bool = False
 ) -> float:
-    """
-    Calculate the continuous color array index for `ColorMode.INDEXED`,
-    where each wave cycle steps forward by 1.0 (0 -> 1 -> 2 -> 3 ...).
+    """Calculate the continuous color array index for
+    `ColorMode.INDEXED`, where each wave cycle steps forward by 1.0.
     """
     if accel_secs <= 0 or (not oscillation and elapsed_total >= accel_secs):
         return 1.0
@@ -67,8 +66,8 @@ def _calculate_color_index(
 
 
 def _truncate_text(text: str, max_width: int) -> str:
-    """
-    Truncate text to visual width while respecting grapheme boundaries.
+    """Truncate text to visual width while respecting grapheme
+    boundaries.
     """
     if max_width <= 0:
         return ''
@@ -100,8 +99,7 @@ class RenderEngine:
         config: SpinnerConfig,
         state: SpinnerState
     ) -> None:
-        """
-        Initialize the render engine with configuration and state.
+        """Initialize the render engine with configuration and state.
 
         Args:
             config: Static animation configuration parameters.

@@ -17,9 +17,8 @@ from seawhirl._core.terminal import ANSI_CARRIAGE_RETURN, ANSI_CLEAR_LINE
 
 
 class SpinnerBackend(ABC):
-    """
-    Abstract base class defining the contract for continuous rendering
-    execution strategies.
+    """Abstract base class defining the contract for continuous
+    rendering.
     """
     def __init__(
         self,
@@ -49,14 +48,14 @@ class SpinnerBackend(ABC):
         pass
 
     async def astart(self) -> None:
-        """
-        Start the asynchronous rendering loop. Defaults to sync start.
+        """Start the asynchronous rendering loop. Defaults to sync
+        start.
         """
         self.start()
 
     async def astop(self) -> None:
-        """
-        Stop the asynchronous rendering loop. Defaults to sync stop.
+        """Stop the asynchronous rendering loop. Defaults to sync
+        stop.
         """
         self.stop()
 
@@ -86,10 +85,8 @@ class SpinnerBackend(ABC):
 
 
 class ThreadBackend(SpinnerBackend):
-    """
-    Implementation that delegates rendering to a daemonized background
-    thread. Standard print statements must be intercepted to prevent
-    terminal tearing.
+    """Class that delegates rendering to a daemonized background
+    thread.
     """
     def __init__(
         self,
@@ -141,10 +138,8 @@ class ThreadBackend(SpinnerBackend):
 
 
 class AsyncBackend(SpinnerBackend):
-    """
-    Implementation that delegates rendering to the active asyncio event
-    loop. Permits smooth integration into existing coroutines without
-    thread management overhead.
+    """Class that delegates rendering to the active asyncio event
+    loop.
     """
     def __init__(
         self,
@@ -168,9 +163,7 @@ class AsyncBackend(SpinnerBackend):
         pass
 
     async def _awrite_frame(self, frame: str = '') -> None:
-        """
-        Write a frame without blocking the event loop.
-        """
+        """Write a frame without blocking the event loop."""
         if self._lock.acquire(blocking=False):
             try:
                 self.stream.write(
@@ -183,8 +176,8 @@ class AsyncBackend(SpinnerBackend):
             await asyncio.to_thread(self._write_frame, frame)
 
     async def _async_render_loop(self) -> None:
-        """
-        Internal asynchronous polling loop mapping engine state to I/O.
+        """Internal asynchronous polling loop mapping engine state to 
+        I/O.
         """
         engine = RenderEngine(self.config, self.state)
 

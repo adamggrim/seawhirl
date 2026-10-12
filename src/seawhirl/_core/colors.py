@@ -30,8 +30,8 @@ def _is_rgb_tuple(value: object) -> bool:
 
 
 def _lerp_ansi(start_rgb: RGB, end_rgb: RGB, t: float) -> str:
-    """
-    Format a linearly interpolated RGB pair as an ANSI escape sequence.
+    """Format a linearly interpolated RGB pair as an ANSI escape
+    sequence.
     """
     r = round(start_rgb[0] + (end_rgb[0] - start_rgb[0]) * t)
     g = round(start_rgb[1] + (end_rgb[1] - start_rgb[1]) * t)
@@ -40,8 +40,8 @@ def _lerp_ansi(start_rgb: RGB, end_rgb: RGB, t: float) -> str:
 
 
 def _parse_rgb(color: ColorSpec) -> RGB:
-    """
-    Parse a color name, 6-digit hex code or RGB tuple into an RGB tuple.
+    """Parse a color name, 6-digit hex code or RGB tuple into an RGB
+    tuple.
     """
     if isinstance(color, tuple):
         if (
@@ -76,8 +76,7 @@ def _parse_rgb(color: ColorSpec) -> RGB:
 
 
 def parse_color_spec(color: ColorInput | None) -> tuple[RGB, ...] | None:
-    """
-    Normalize a single color, comma-separated string or sequence of
+    """Normalize a single color, comma-separated string or sequence of
     colors into a tuple of RGB stops.
     """
     if color is None:
@@ -132,8 +131,7 @@ def interpolate_indexed_ansi_color(
     colors: Sequence[RGB],
     color_index: float
 ) -> str:
-    """
-    Interpolate between adjacent RGB stops.
+    """Interpolate between adjacent RGB stops.
 
     Integer values of `color_index` (0, 1, 2, ...) map directly to
     `colors[i % len(colors)]`.

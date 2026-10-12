@@ -30,9 +30,8 @@ from seawhirl._lib.spinner import Spinner
 def _build_parser() -> argparse.ArgumentParser:
     """Construct and configure the command-line argument parser."""
     def formatter(prog: str) -> argparse.HelpFormatter:
-        """
-        A custom help formatter to align help messages neatly based on
-        the maximum argument width.
+        """Format help messages neatly based on maximum argument
+        width.
         """
         terminal_width = shutil.get_terminal_size().columns
         return argparse.RawDescriptionHelpFormatter(
