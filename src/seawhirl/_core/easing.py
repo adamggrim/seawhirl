@@ -1,8 +1,14 @@
+"""Mathematical easing curves and physics."""
+
+from __future__ import annotations
+
 import math
+from dataclasses import dataclass, replace
+from enum import Enum
 from typing import Protocol
-from dataclasses import dataclass
 
 __all__ = [
+    'ColorMode',
     'EASING_REGISTRY',
     'EasingStrategy',
     'Inertial',
@@ -15,8 +21,18 @@ __all__ = [
 MINIMUM_SAFE_BASE = 1.0001
 
 
+class ColorMode(Enum):
+    """Color progression modes for easing curves."""
+    NORMALIZED = 'normalized'
+    INDEXED = 'indexed'
+
+
 class EasingStrategy(Protocol):
     """Protocol for calculating custom easing curves."""
+    @property
+    def color_mode(self) -> ColorMode:
+        ...
+
     def calculate_multiplier(self, progress: float) -> float:
         ...
 
@@ -26,6 +42,10 @@ class Logarithmic:
     """Logarithmic curve for immediate acceleration."""
     base: float = 10.0
 
+    @property
+    def color_mode(self) -> ColorMode:
+        return ColorMode.NORMALIZED
+
     def calculate_multiplier(self, progress: float) -> float:
         safe_base = max(MINIMUM_SAFE_BASE, self.base)
         return math.log(1 + (safe_base - 1) * progress, safe_base)
@@ -34,6 +54,16 @@ class Logarithmic:
 @dataclass(slots=True)
 class Sinusoidal:
     """Sinusoidal curve for oscillating acceleration."""
+    color_mode: ColorMode = ColorMode.NORMALIZED
+
+    def normalized(self) -> Sinusoidal:
+        """Map all colors across the normalized 0.0..1.0 multiplier."""
+        return replace(self, color_mode=ColorMode.NORMALIZED)
+
+    def indexed(self) -> Sinusoidal:
+        """Advance one color stop per wave cycle."""
+        return replace(self, color_mode=ColorMode.INDEXED)
+
     def calculate_multiplier(self, progress: float) -> float:
         return 0.5 * (1 - math.cos(math.pi * progress))
 
@@ -43,6 +73,15 @@ class Spring:
     """Spring-based curve with tension and friction."""
     tension: float = 5.0
     friction: float = 10.0
+    color_mode: ColorMode = ColorMode.NORMALIZED
+
+    def normalized(self) -> Spring:
+        """Map all colors across the normalized 0.0..1.0 multiplier."""
+        return replace(self, color_mode=ColorMode.NORMALIZED)
+
+    def indexed(self) -> Spring:
+        """Advance one color stop per wave cycle."""
+        return replace(self, color_mode=ColorMode.INDEXED)
 
     def calculate_multiplier(self, progress: float) -> float:
         decay = math.exp(-self.tension * progress)
@@ -54,6 +93,10 @@ class Spring:
 class Inertial:
     """Inertial curve with a power function."""
     power: float = 5.0
+
+    @property
+    def color_mode(self) -> ColorMode:
+        return ColorMode.NORMALIZED
 
     def calculate_multiplier(self, progress: float) -> float:
         return math.pow(progress, self.power)

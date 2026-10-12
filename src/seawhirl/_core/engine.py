@@ -1,10 +1,17 @@
+"""The core spinner rendering engine."""
+
 import random
 import shutil
 import time
 
-from seawhirl._core.colors import interpolate_ansi_color
+import math
+
+from seawhirl._core.colors import (
+    interpolate_ansi_color,
+    interpolate_indexed_ansi_color,
+)
 from seawhirl._core.config import SpinnerConfig, SpinnerState
-from seawhirl._core.easing import EasingStrategy
+from seawhirl._core.easing import ColorMode, EasingStrategy
 from seawhirl._core.terminal import ANSI_MOVE_COLUMN, ANSI_RESET_COLOR
 from seawhirl._core.utils import get_visual_width, iter_grapheme_widths
 
@@ -32,36 +39,31 @@ def _calculate_multiplier(
     return easing.calculate_multiplier(progress)
 
 
-def _calculate_current_fps(
+def _calculate_color_index(
     elapsed_total: float,
     accel_secs: float,
-    initial_fps: float,
-    peak_fps: float,
     easing: EasingStrategy,
     oscillation: bool = False
 ) -> float:
     """
-    Determine the current frames per second based on the easing
-    strategy.
-
-    Args:
-        elapsed_total: The time elapsed since rendering started.
-        accel_secs: The seconds to reach the maximum frames per second.
-        initial_fps: The starting frames per second.
-        peak_fps: The maximum frames per second.
-        easing: The easing model for the animation.
-        oscillation: Whether to oscillate speed.
-
-    Returns:
-        float: The calculated frames per second for this tick.
+    Calculate the continuous color array index for `ColorMode.INDEXED`,
+    where each wave cycle steps forward by 1.0 (0 -> 1 -> 2 -> 3 ...).
     """
-    multiplier = _calculate_multiplier(
-        elapsed_total,
-        accel_secs,
-        easing,
-        oscillation
-    )
-    return initial_fps + (peak_fps - initial_fps) * multiplier
+    if accel_secs <= 0 or (not oscillation and elapsed_total >= accel_secs):
+        return 1.0
+
+    total_cycles = elapsed_total / accel_secs
+    cycle_idx = math.floor(total_cycles)
+    cycle_progress = total_cycles - cycle_idx
+
+    if oscillation and cycle_idx % 2 == 1:
+        step_progress = 1.0 - easing.calculate_multiplier(
+            1.0 - cycle_progress
+        )
+    else:
+        step_progress = easing.calculate_multiplier(cycle_progress)
+
+    return cycle_idx + max(0.0, min(1.0, step_progress))
 
 
 def _truncate_text(text: str, max_width: int) -> str:
@@ -172,11 +174,22 @@ class RenderEngine:
             rendered_frame = ''
         else:
             if self.state.colors is not None:
-                ansi_color = interpolate_ansi_color(
-                    self.state.colors[0],
-                    self.state.colors[1],
-                    multiplier
-                )
+                if self.config.easing.color_mode is ColorMode.INDEXED:
+                    color_index = _calculate_color_index(
+                        elapsed_total,
+                        self.config.accel_secs,
+                        self.config.easing,
+                        self.config.oscillation
+                    )
+                    ansi_color = interpolate_indexed_ansi_color(
+                        self.state.colors,
+                        color_index
+                    )
+                else:
+                    ansi_color = interpolate_ansi_color(
+                        self.state.colors,
+                        multiplier
+                    )
                 styled_icon = f'{ansi_color}{icon}{ANSI_RESET_COLOR}'
             else:
                 styled_icon = icon
