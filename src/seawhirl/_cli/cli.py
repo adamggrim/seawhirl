@@ -1,9 +1,12 @@
+"""Command-line argument parsing."""
+
 import argparse
 import shutil
 import sys
 import time
 
 from seawhirl._core.easing import EASING_REGISTRY, get_easing_strategy
+from seawhirl._core.exceptions import SeawhirlError
 from seawhirl._core.presets import PRESETS
 from seawhirl._lib.spinner import Spinner
 
@@ -95,8 +98,8 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         metavar='<str>',
         help=(
-            'color or gradient pair '
-            "('cyan', 'cyan,magenta', '#00ffcc,#ff0066')"
+            'color or comma-separated gradient '
+            "('red', 'red,blue', 'red,blue,green')"
         ),
     )
 
@@ -128,4 +131,7 @@ def main() -> None:
         print('Spinner finished.')
     except KeyboardInterrupt:
         print('\nSpinner terminated.')
+        sys.exit(1)
+    except SeawhirlError as e:
+        print(f'Error: {e}', file=sys.stderr)
         sys.exit(1)
