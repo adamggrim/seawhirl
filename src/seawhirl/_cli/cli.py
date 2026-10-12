@@ -5,6 +5,22 @@ import shutil
 import sys
 import time
 
+from seawhirl._cli.messages import (
+    ACCEL_HELP_MSG,
+    COLOR_HELP_MSG,
+    CUSTOM_HELP_MSG,
+    DURATION_HELP_MSG,
+    EASING_HELP_MSG,
+    EPILOG_MSG,
+    ERROR_MSG,
+    OSCILLATION_HELP_MSG,
+    PRESETS_PREVIEW_MSG,
+    PREVIEW_SPINNERS_MSG,
+    SPINNER_FINISHED_MSG,
+    SPINNER_TERMINATED_MSG,
+    TEXT_HELP_MSG,
+    USAGE_MSG,
+)
 from seawhirl._core.easing import EASING_REGISTRY, get_easing_strategy
 from seawhirl._core.exceptions import SeawhirlError
 from seawhirl._core.presets import PRESETS
@@ -25,7 +41,7 @@ def _build_parser() -> argparse.ArgumentParser:
             width=terminal_width
         )
 
-    command_lines = ['presets:']
+    command_lines = [PRESETS_PREVIEW_MSG]
     for name, frames in PRESETS.items():
         cleaned_frames = [f.strip() for f in frames[:5] if f.strip()]
         preview_frames = cleaned_frames[:4]
@@ -37,14 +53,14 @@ def _build_parser() -> argparse.ArgumentParser:
         command_lines.append(f'  {name} ({preview})')
 
     presets_description = (
-        'Preview spinners directly in the terminal.\n\n' +
+        PREVIEW_SPINNERS_MSG +
         '\n'.join(command_lines)
     )
 
     parser = argparse.ArgumentParser(
-        usage='seawhirl [preset] [options]',
+        usage=USAGE_MSG,
         description=presets_description,
-        epilog='To access advanced physics, use the package API.',
+        epilog=EPILOG_MSG,
         formatter_class=formatter
     )
 
@@ -58,49 +74,46 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         '--custom',
         metavar='<str>',
-        help="custom frames separated by commas ('🚀,🪐,🛸')"
+        help=CUSTOM_HELP_MSG
     )
     parser.add_argument(
         '--accel',
         type=float,
         default=3.0,
         metavar='<secs>',
-        help='acceleration window in seconds'
+        help=ACCEL_HELP_MSG
     )
     parser.add_argument(
         '--duration',
         type=float,
         default=5.0,
         metavar='<secs>',
-        help='total run time in seconds'
+        help=DURATION_HELP_MSG
     )
     parser.add_argument(
         '--easing',
         choices=list(EASING_REGISTRY),
         default='logarithmic',
         metavar='<curve>',
-        help="easing curve ('logarithmic', 'sinusoidal', 'spring', 'inertial')"
+        help=EASING_HELP_MSG
     )
     parser.add_argument(
         '--text',
         dest='status_text',
         default='',
         metavar='<str>',
-        help='status text to display next to the spinner'
+        help=TEXT_HELP_MSG
     )
     parser.add_argument(
         '--oscillation',
         action='store_true',
-        help='pulse the animation speed back and forth'
+        help=OSCILLATION_HELP_MSG
     )
     parser.add_argument(
         '--color',
         default=None,
         metavar='<str>',
-        help=(
-            'color or comma-separated gradient '
-            "('red', 'red,blue', 'red,blue,green')"
-        ),
+        help=COLOR_HELP_MSG,
     )
 
     return parser
@@ -128,10 +141,10 @@ def main() -> None:
         )
         with spinner:
             time.sleep(args.duration)
-        print('Spinner finished.')
+        print(SPINNER_FINISHED_MSG)
     except KeyboardInterrupt:
-        print('\nSpinner terminated.')
+        print(SPINNER_TERMINATED_MSG)
         sys.exit(1)
     except SeawhirlError as e:
-        print(f'Error: {e}', file=sys.stderr)
+        print(ERROR_MSG.format(error=e), file=sys.stderr)
         sys.exit(1)

@@ -1,4 +1,5 @@
 import seawhirl
+from seawhirl._core.colors import register_color
 from seawhirl._core.easing import (
     EasingStrategy,
     Inertial,
@@ -29,7 +30,8 @@ def test_all_exports() -> None:
         'SeawhirlError',
         'Sinusoidal',
         'Spinner',
-        'Spring'
+        'Spring',
+        'register_color'
     ]
 
     assert hasattr(seawhirl, '__all__')
@@ -49,7 +51,7 @@ def test_imports_match_origins() -> None:
     assert seawhirl.Sinusoidal is Sinusoidal
     assert seawhirl.Spinner is Spinner
     assert seawhirl.Spring is Spring
-
+    assert seawhirl.register_color is register_color
 
 def test_public_namespace_cleanliness() -> None:
     public_attributes = {
