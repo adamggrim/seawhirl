@@ -16,49 +16,36 @@ from seawhirl._core.exceptions import (
 from seawhirl._core.presets import PRESETS
 from seawhirl._lib.spinner import Backend, Spinner
 
+EXPECTED_EXPORTS: dict[str, object] = {
+    'Backend': Backend,
+    'BackendStartupError': BackendStartupError,
+    'EasingStrategy': EasingStrategy,
+    'Inertial': Inertial,
+    'InvalidColorError': InvalidColorError,
+    'InvalidPresetError': InvalidPresetError,
+    'Logarithmic': Logarithmic,
+    'PRESETS': PRESETS,
+    'SeawhirlError': SeawhirlError,
+    'Sinusoidal': Sinusoidal,
+    'Spinner': Spinner,
+    'Spring': Spring,
+    'register_color': register_color,
+}
+
 
 def test_all_exports() -> None:
-    expected_exports = [
-        'Backend',
-        'BackendStartupError',
-        'EasingStrategy',
-        'Inertial',
-        'InvalidColorError',
-        'InvalidPresetError',
-        'Logarithmic',
-        'PRESETS',
-        'SeawhirlError',
-        'Sinusoidal',
-        'Spinner',
-        'Spring',
-        'register_color'
-    ]
-
     assert hasattr(seawhirl, '__all__')
-    assert getattr(seawhirl, '__all__') == expected_exports
+    assert getattr(seawhirl, '__all__') == list(EXPECTED_EXPORTS.keys())
 
 
 def test_imports_match_origins() -> None:
-    assert seawhirl.Backend is Backend
-    assert seawhirl.BackendStartupError is BackendStartupError
-    assert seawhirl.EasingStrategy is EasingStrategy
-    assert seawhirl.Inertial is Inertial
-    assert seawhirl.InvalidColorError is InvalidColorError
-    assert seawhirl.InvalidPresetError is InvalidPresetError
-    assert seawhirl.Logarithmic is Logarithmic
-    assert seawhirl.PRESETS is PRESETS
-    assert seawhirl.SeawhirlError is SeawhirlError
-    assert seawhirl.Sinusoidal is Sinusoidal
-    assert seawhirl.Spinner is Spinner
-    assert seawhirl.Spring is Spring
-    assert seawhirl.register_color is register_color
+    for name, origin in EXPECTED_EXPORTS.items():
+        assert getattr(seawhirl, name) is origin
+
 
 def test_public_namespace_cleanliness() -> None:
     public_attributes = {
         attr for attr in dir(seawhirl)
         if not attr.startswith('_')
     }
-
-    expected_attributes = set(getattr(seawhirl, '__all__'))
-
-    assert public_attributes == expected_attributes
+    assert public_attributes == set(EXPECTED_EXPORTS.keys())

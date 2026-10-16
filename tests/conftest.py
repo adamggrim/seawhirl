@@ -46,4 +46,10 @@ def dummy_config():
 
 @pytest.fixture
 def dummy_state():
-    return SpinnerState(status_text='Loading')
+    return SpinnerState(
+        status_text=(
+            'EVERY CONCEPT, EVERY EMOTION PRESENTS ITSELF TO THE VIVID '
+            'CONSCIOUSNESS IN SOME PRIMARY FORM. IT BELONGS TO THE ART OF '
+            'THIS FORM.'
+        )
+    )

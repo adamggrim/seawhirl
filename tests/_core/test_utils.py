@@ -7,9 +7,9 @@ from seawhirl._core.utils import get_visual_width, iter_grapheme_widths
 
 @pytest.mark.parametrize('text, expected', [
     ('', 0),
-    ('pines', 5),
+    ('Oread', 5),
     ('岩石', 4),
-    ('green 綠色的', 12),
+    ('vortex 漩渦', 11),
     ('  ', 2),
 ])
 def test_get_visual_width_standard_text(text: str, expected: int) -> None:
@@ -28,13 +28,16 @@ def test_iter_grapheme_widths() -> None:
     assert result == [('A', 1), ('👨‍👩‍👧‍👦', 2), ('岩', 2)]
 
 
+@pytest.mark.parametrize(('text', 'widths', 'expected'), [
+    ('HD', [-1, -1], 4),
+    ('EP', [1, -1], 3),
+])
 @patch('seawhirl._core.utils.wcswidth')
-def test_get_visual_width_negative_fallback(mock_wcswidth) -> None:
-    mock_wcswidth.return_value = -1
-    assert get_visual_width('AB') == 4
-
-
-@patch('seawhirl._core.utils.wcswidth')
-def test_get_visual_width_mixed_fallback(mock_wcswidth) -> None:
-    mock_wcswidth.side_effect = [1, -1]
-    assert get_visual_width('AB') == 3
+def test_get_visual_width_fallbacks(
+    mock_wcswidth,
+    text: str,
+    widths: list[int],
+    expected: int
+) -> None:
+    mock_wcswidth.side_effect = widths
+    assert get_visual_width(text) == expected

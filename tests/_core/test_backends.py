@@ -9,29 +9,33 @@ from seawhirl._core.backends import AsyncBackend, ThreadBackend
 from seawhirl._core.exceptions import BackendStartupError
 
 
-def test_thread_backend_lifecycle(dummy_config, dummy_state) -> None:
-    stream = io.StringIO()
-    backend = ThreadBackend(stream, dummy_config, dummy_state)
-
-    assert backend._thread is None
-
-    backend.start()
-    assert backend._thread is not None
-    assert backend._thread.is_alive()
-
-    backend.stop()
-    assert backend._thread is None
+@pytest.fixture
+def thread_backend(dummy_config, dummy_state) -> ThreadBackend:
+    return ThreadBackend(io.StringIO(), dummy_config, dummy_state)
 
 
-def test_thread_backend_context_manager(dummy_config, dummy_state) -> None:
-    stream = io.StringIO()
-    backend = ThreadBackend(stream, dummy_config, dummy_state)
+@pytest.fixture
+def async_backend(dummy_config, dummy_state) -> AsyncBackend:
+    return AsyncBackend(io.StringIO(), dummy_config, dummy_state)
 
-    with backend:
-        assert backend._thread is not None
-        assert backend._thread.is_alive()
 
-    assert backend._thread is None
+def test_thread_backend_lifecycle(thread_backend: ThreadBackend) -> None:
+    assert thread_backend._thread is None
+
+    thread_backend.start()
+    assert thread_backend._thread is not None
+    assert thread_backend._thread.is_alive()
+
+    thread_backend.stop()
+    assert thread_backend._thread is None
+
+
+def test_thread_backend_context_manager(thread_backend: ThreadBackend) -> None:
+    with thread_backend:
+        assert thread_backend._thread is not None
+        assert thread_backend._thread.is_alive()
+
+    assert thread_backend._thread is None
 
 
 @patch('seawhirl._core.backends.RenderEngine')
@@ -58,49 +62,36 @@ def test_thread_backend_render_loop(
     assert any('mocked_frame' in str(call) for call in calls)
 
 
-def test_async_backend_sync_start_raises(dummy_config, dummy_state) -> None:
-    stream = io.StringIO()
-    backend = AsyncBackend(stream, dummy_config, dummy_state)
-
+def test_async_backend_sync_start_raises(async_backend: AsyncBackend) -> None:
     with pytest.raises(BackendStartupError):
-        backend.start()
+        async_backend.start()
 
 
-def test_async_backend_sync_stop_is_noop(dummy_config, dummy_state) -> None:
-    stream = io.StringIO()
-    backend = AsyncBackend(stream, dummy_config, dummy_state)
-
-    backend.stop()
+def test_async_backend_sync_stop_is_noop(async_backend: AsyncBackend) -> None:
+    async_backend.stop()
 
 
 @pytest.mark.asyncio
-async def test_async_backend_lifecycle(dummy_config, dummy_state) -> None:
-    stream = io.StringIO()
-    backend = AsyncBackend(stream, dummy_config, dummy_state)
+async def test_async_backend_lifecycle(async_backend: AsyncBackend) -> None:
+    assert async_backend._async_task is None
 
-    assert backend._async_task is None
+    await async_backend.astart()
+    assert async_backend._async_task is not None
+    assert not async_backend._async_task.done()
 
-    await backend.astart()
-    assert backend._async_task is not None
-    assert not backend._async_task.done()
-
-    await backend.astop()
-    assert backend._async_task is None
+    await async_backend.astop()
+    assert async_backend._async_task is None
 
 
 @pytest.mark.asyncio
 async def test_async_backend_context_manager(
-    dummy_config,
-    dummy_state
+    async_backend: AsyncBackend
 ) -> None:
-    stream = io.StringIO()
-    backend = AsyncBackend(stream, dummy_config, dummy_state)
+    async with async_backend:
+        assert async_backend._async_task is not None
+        assert not async_backend._async_task.done()
 
-    async with backend:
-        assert backend._async_task is not None
-        assert not backend._async_task.done()
-
-    assert backend._async_task is None
+    assert async_backend._async_task is None
 
 
 @pytest.mark.asyncio

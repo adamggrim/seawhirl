@@ -20,36 +20,52 @@ from seawhirl._core.terminal import (
 
 
 class TestStreamProxy:
-    def test_write_empty_string_returns_zero(self) -> None:
+    @pytest.fixture
+    def string_proxy(self) -> tuple[io.StringIO, StreamProxy]:
         stream = io.StringIO()
-        proxy = StreamProxy(stream)
+        return stream, StreamProxy(stream)
+
+    def test_write_empty_string_returns_zero(
+        self,
+        string_proxy: tuple[io.StringIO, StreamProxy]
+    ) -> None:
+        stream, proxy = string_proxy
 
         assert proxy.write('') == 0
         assert stream.getvalue() == ''
         assert proxy._is_new_line is True
 
-    def test_write_handles_bare_newlines(self) -> None:
-        stream = io.StringIO()
-        proxy = StreamProxy(stream)
+    def test_write_handles_bare_newlines(
+        self,
+        string_proxy: tuple[io.StringIO, StreamProxy]
+    ) -> None:
+        stream, proxy = string_proxy
 
         proxy.write('\n')
 
         assert stream.getvalue() == '\n'
         assert proxy._is_new_line is True
 
-    def test_write_prepends_ansi_codes_for_new_lines(self) -> None:
-        stream = io.StringIO()
-        proxy = StreamProxy(stream)
+    def test_write_prepends_ansi_codes_for_new_lines(
+        self,
+        string_proxy: tuple[io.StringIO, StreamProxy]
+    ) -> None:
+        stream, proxy = string_proxy
 
-        proxy.write('Whirl up sea...')
+        proxy.write('Cover us with your pools of fir.')
 
-        expected = f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}Whirl up sea...'
+        expected = (
+            f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}'
+            'Cover us with your pools of fir.'
+        )
         assert stream.getvalue() == expected
         assert proxy._is_new_line is False
 
-    def test_write_continuous_text(self) -> None:
-        stream = io.StringIO()
-        proxy = StreamProxy(stream)
+    def test_write_continuous_text(
+        self,
+        string_proxy: tuple[io.StringIO, StreamProxy]
+    ) -> None:
+        stream, proxy = string_proxy
 
         proxy.write('whirl your pointed ')
         proxy.write('pines')
@@ -60,19 +76,21 @@ class TestStreamProxy:
         )
         assert stream.getvalue() == expected
 
-    def test_write_multiline_tracks_trailing_newline(self) -> None:
-        stream = io.StringIO()
-        proxy = StreamProxy(stream)
+    def test_write_multiline_tracks_trailing_newline(
+        self,
+        string_proxy: tuple[io.StringIO, StreamProxy]
+    ) -> None:
+        stream, proxy = string_proxy
 
-        proxy.write('Whirl up, sea—\n')
+        proxy.write('one idea\n')
         assert proxy._is_new_line is True
 
-        proxy.write('whirl your pointed pines')
+        proxy.write('set on top of another')
         assert proxy._is_new_line is False
 
         expected = (
-            f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}Whirl up, sea—\n'
-            f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}whirl your pointed pines'
+            f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}one idea\n'
+            f'{ANSI_CARRIAGE_RETURN}{ANSI_CLEAR_LINE}set on top of another'
         )
         assert stream.getvalue() == expected
 
@@ -90,10 +108,7 @@ class TestStreamProxy:
         stream.flush.assert_called_once()
 
     def test_getattr_delegates_to_original_stream(self) -> None:
-        stream = MagicMock()
-        stream.encoding = 'utf-8'
-        stream.errors = 'strict'
-
+        stream = MagicMock(encoding='utf-8', errors='strict')
         proxy = StreamProxy(stream)
 
         assert proxy.encoding == 'utf-8'
@@ -119,20 +134,22 @@ class TestTerminalLifecycle:
         stream.write.assert_called_once_with(ANSI_SHOW_CURSOR)
 
     def test_stdout_proxy_application(self) -> None:
-        stream = MagicMock()
         original_stdout = sys.stdout
 
-        with TerminalLifecycle(stream, disabled=False, handle_signals=False):
+        with TerminalLifecycle(
+            MagicMock(),
+            disabled=False,
+            handle_signals=False
+        ):
             assert isinstance(sys.stdout, StreamProxy)
 
         assert sys.stdout is original_stdout
 
     def test_stdout_proxy_shares_lifecycle_lock(self) -> None:
-        stream = MagicMock()
         shared_lock = threading.Lock()
 
         with TerminalLifecycle(
-            stream,
+            MagicMock(),
             disabled=False,
             handle_signals=False,
             lock=shared_lock
@@ -141,40 +158,29 @@ class TestTerminalLifecycle:
             assert sys.stdout._lock is shared_lock
             assert lifecycle.lock is shared_lock
 
+    @pytest.mark.parametrize('sigint_handler', [
+        signal.SIG_DFL,
+        signal.default_int_handler,
+    ])
     @patch('signal.signal')
     @patch('signal.getsignal')
     def test_signal_handler_registration(
         self,
         mock_getsignal: MagicMock,
-        mock_signal: MagicMock
+        mock_signal: MagicMock,
+        sigint_handler: object
     ) -> None:
-        stream = MagicMock()
-        mock_getsignal.return_value = signal.SIG_DFL
+        mock_getsignal.side_effect = [sigint_handler, signal.SIG_DFL]
 
-        with TerminalLifecycle(stream, disabled=False, handle_signals=True):
+        with TerminalLifecycle(
+            MagicMock(),
+            disabled=False,
+            handle_signals=True
+        ):
             assert mock_signal.call_count == 2
+            mock_signal.assert_any_call(signal.SIGINT, ANY)
 
         assert mock_signal.call_count == 4
-
-    @patch('signal.signal')
-    @patch('signal.getsignal')
-    def test_sigint_default_int_handler_registration(
-        self,
-        mock_getsignal: MagicMock,
-        mock_signal: MagicMock
-    ) -> None:
-        stream = MagicMock()
-        mock_getsignal.side_effect = [
-            signal.default_int_handler,
-            signal.SIG_DFL
-        ]
-
-        with TerminalLifecycle(stream, disabled=False, handle_signals=True):
-            assert mock_signal.call_count == 2
-            mock_signal.assert_any_call(
-                signal.SIGINT,
-                ANY
-            )
 
 
 class TestWindowsVTProcessing:
@@ -200,29 +206,31 @@ class TestWindowsVTProcessing:
 class TestIsSupportedTerminal:
     """Tests for evaluating terminal capability heuristics."""
 
-    def test_supported_terminal(self) -> None:
-        stream = MagicMock()
+    @pytest.fixture
+    def tty_stream(self) -> MagicMock:
+        stream = MagicMock(encoding='utf-8')
         stream.isatty.return_value = True
-        stream.encoding = 'utf-8'
+        return stream
 
+    def test_supported_terminal(self, tty_stream: MagicMock) -> None:
         with patch.dict(os.environ, clear=True):
-            assert is_supported_terminal(stream) is True
+            assert is_supported_terminal(tty_stream) is True
 
-    def test_missing_isatty_disables_support(self) -> None:
-        stream = MagicMock()
-        stream.isatty.return_value = False
-        stream.encoding = 'utf-8'
-
+    def test_missing_isatty_disables_support(
+        self,
+        tty_stream: MagicMock
+    ) -> None:
+        tty_stream.isatty.return_value = False
         with patch.dict(os.environ, clear=True):
-            assert is_supported_terminal(stream) is False
+            assert is_supported_terminal(tty_stream) is False
 
-    def test_invalid_encoding_disables_support(self) -> None:
-        stream = MagicMock()
-        stream.isatty.return_value = True
-        stream.encoding = 'cp1252'
-
+    def test_invalid_encoding_disables_support(
+        self,
+        tty_stream: MagicMock
+    ) -> None:
+        tty_stream.encoding = 'cp1252'
         with patch.dict(os.environ, clear=True):
-            assert is_supported_terminal(stream) is False
+            assert is_supported_terminal(tty_stream) is False
 
     @pytest.mark.parametrize('env_var, value', [
         ('CI', '1'),
@@ -231,12 +239,9 @@ class TestIsSupportedTerminal:
     ])
     def test_environment_variables_disable_support(
         self,
+        tty_stream: MagicMock,
         env_var: str,
         value: str
     ) -> None:
-        stream = MagicMock()
-        stream.isatty.return_value = True
-        stream.encoding = 'utf-8'
-
         with patch.dict(os.environ, {env_var: value}, clear=True):
-            assert is_supported_terminal(stream) is False
+            assert is_supported_terminal(tty_stream) is False

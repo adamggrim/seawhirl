@@ -1,15 +1,14 @@
 import runpy
 from unittest.mock import patch
 
+import pytest
 
-def test_main_module_invokes_cli() -> None:
+
+@pytest.mark.parametrize(('run_name', 'expected_calls'), [
+    ('__main__', 1),
+    ('not_main', 0),
+])
+def test_main_module_execution(run_name: str, expected_calls: int) -> None:
     with patch('seawhirl._cli.cli.main') as mock_main:
-        # Simulate running `python -m seawhirl`.
-        runpy.run_module('seawhirl', run_name='__main__')
-        mock_main.assert_called_once()
-
-
-def test_main_module_import_does_not_invoke_cli() -> None:
-    with patch('seawhirl._cli.cli.main') as mock_main:
-        runpy.run_module('seawhirl', run_name='not_main')
-        mock_main.assert_not_called()
+        runpy.run_module('seawhirl', run_name=run_name)
+        assert mock_main.call_count == expected_calls

@@ -6,8 +6,21 @@ from seawhirl._cli.cli import _build_parser, main
 from seawhirl._core.presets import PRESETS
 
 
-def test_parser_defaults() -> None:
-    parser = _build_parser()
+@pytest.fixture
+def parser():
+    return _build_parser()
+
+
+@pytest.fixture
+def mock_cli_env():
+    with (
+        patch('seawhirl._cli.cli.Spinner') as mock_spinner_cls,
+        patch('seawhirl._cli.cli.time.sleep') as mock_sleep,
+    ):
+        yield mock_spinner_cls, mock_sleep
+
+
+def test_parser_defaults(parser) -> None:
     args = parser.parse_args([])
 
     assert args.preset == 'whirl'
@@ -19,14 +32,13 @@ def test_parser_defaults() -> None:
     assert args.custom is None
 
 
-def test_parser_custom_args() -> None:
-    parser = _build_parser()
+def test_parser_custom_args(parser) -> None:
     args = parser.parse_args([
         'dots',
         '--accel', '1.5',
         '--duration', '2.0',
         '--easing', 'spring',
-        '--text', 'Loading',
+        '--text', 'It represents, in mechanics, the greatest efficiency.',
         '--oscillation'
     ])
 
@@ -34,13 +46,17 @@ def test_parser_custom_args() -> None:
     assert args.accel == 1.5
     assert args.duration == 2.0
     assert args.easing == 'spring'
-    assert args.status_text == 'Loading'
+    assert (
+        args.status_text
+        == 'It represents, in mechanics, the greatest efficiency.'
+    )
     assert args.oscillation is True
 
 
-def test_parser_invalid_preset(capsys: pytest.CaptureFixture[str]) -> None:
-    parser = _build_parser()
-
+def test_parser_invalid_preset(
+    parser,
+    capsys: pytest.CaptureFixture[str]
+) -> None:
     with pytest.raises(SystemExit):
         parser.parse_args(['invalid_preset_name'])
 
@@ -48,16 +64,13 @@ def test_parser_invalid_preset(capsys: pytest.CaptureFixture[str]) -> None:
     assert "invalid choice: 'invalid_preset_name'" in captured.err
 
 
-@patch('seawhirl._cli.cli.Spinner')
-@patch('seawhirl._cli.cli.time.sleep')
 @patch('sys.argv', ['seawhirl'])
 def test_main_default_execution(
-    mock_sleep: MagicMock,
-    mock_spinner_cls: MagicMock,
+    mock_cli_env: tuple[MagicMock, MagicMock],
     capsys: pytest.CaptureFixture[str]
 ) -> None:
-    mock_spinner_instance = MagicMock()
-    mock_spinner_cls.return_value = mock_spinner_instance
+    mock_spinner_cls, mock_sleep = mock_cli_env
+    mock_spinner_instance = mock_spinner_cls.return_value
 
     main()
 
@@ -77,28 +90,23 @@ def test_main_default_execution(
     assert 'Spinner finished.' in captured.out
 
 
-@patch('seawhirl._cli.cli.Spinner')
-@patch('seawhirl._cli.cli.time.sleep')
 @patch('sys.argv', ['seawhirl', '--custom', '🌊,🌲,🪨'])
 def test_main_custom_frames(
-    _mock_sleep: MagicMock,
-    mock_spinner_cls: MagicMock
+    mock_cli_env: tuple[MagicMock, MagicMock]
 ) -> None:
+    mock_spinner_cls, _ = mock_cli_env
     main()
 
     mock_spinner_cls.assert_called_once()
-    kwargs = mock_spinner_cls.call_args.kwargs
-    assert kwargs['frames'] == ['🌊', '🌲', '🪨']
+    assert mock_spinner_cls.call_args.kwargs['frames'] == ['🌊', '🌲', '🪨']
 
 
-@patch('seawhirl._cli.cli.Spinner')
-@patch('seawhirl._cli.cli.time.sleep')
 @patch('sys.argv', ['seawhirl'])
 def test_main_keyboard_interrupt(
-    mock_sleep: MagicMock,
-    _mock_spinner_cls: MagicMock,
+    mock_cli_env: tuple[MagicMock, MagicMock],
     capsys: pytest.CaptureFixture[str]
 ) -> None:
+    _, mock_sleep = mock_cli_env
     mock_sleep.side_effect = KeyboardInterrupt()
 
     with pytest.raises(SystemExit) as exc_info:

@@ -13,12 +13,15 @@ def test_spinner_initialization(_mock_is_supported: MagicMock) -> None:
     spinner = Spinner(
         accel_secs=1.5,
         frames='dots',
-        status_text='Loading',
+        status_text='The vortex is the point of maximum energy.',
         oscillation=True
     )
 
     assert spinner.config.accel_secs == 1.5
-    assert spinner.state.status_text == 'Loading'
+    assert (
+        spinner.state.status_text
+        == 'The vortex is the point of maximum energy.'
+    )
     assert spinner.config.oscillation is True
     assert isinstance(spinner._worker, ThreadBackend)
     assert spinner._disabled is False
@@ -44,15 +47,32 @@ def test_disabled_terminal_bypasses_rendering(
     assert spinner._disabled is True
 
 
-@patch.object(ThreadBackend, 'start')
-@patch.object(ThreadBackend, 'stop')
-@patch('seawhirl._lib.spinner.is_supported_terminal', return_value=True)
-def test_manual_start_and_stop(
-    _mock_is_supported: MagicMock,
-    mock_stop: MagicMock,
-    mock_start: MagicMock
-) -> None:
-    spinner = Spinner()
+@pytest.fixture
+def patched_thread_spinner():
+    with (
+        patch('seawhirl._lib.spinner.is_supported_terminal', return_value=True),
+        patch.object(ThreadBackend, 'start') as mock_start,
+        patch.object(ThreadBackend, 'stop') as mock_stop,
+    ):
+        yield Spinner(), mock_start, mock_stop
+
+
+@pytest.fixture
+def patched_async_spinner():
+    with (
+        patch('seawhirl._lib.spinner.is_supported_terminal', return_value=True),
+        patch.object(
+            AsyncBackend, 'astart', new_callable=AsyncMock
+        ) as mock_astart,
+        patch.object(
+            AsyncBackend, 'astop', new_callable=AsyncMock
+        ) as mock_astop,
+    ):
+        yield Spinner(backend=Backend.ASYNC), mock_astart, mock_astop
+
+
+def test_manual_start_and_stop(patched_thread_spinner) -> None:
+    spinner, mock_start, mock_stop = patched_thread_spinner
 
     spinner.start()
     mock_start.assert_called_once()
@@ -62,24 +82,26 @@ def test_manual_start_and_stop(
 
 
 def test_update_status_text_and_color() -> None:
-    spinner = Spinner(status_text='Initial', color='cyan')
-    assert spinner.state.status_text == 'Initial'
+    spinner = Spinner(
+        status_text='The Image is the poet’s pigment.',
+        color='cyan'
+    )
+    assert spinner.state.status_text == 'The Image is the poet’s pigment.'
     assert spinner.state.colors == ((0, 255, 255), (0, 255, 255))
 
-    spinner.update('Updated', color=('cyan', 'magenta'))
-    assert spinner.state.status_text == 'Updated'
-    assert spinner.state.colors == ((0, 255, 255), (255, 0, 255))
+    spinner.update(
+        'The painter should use his colour because he sees it or feels it.',
+        color=('cyan', 'green')
+    )
+    assert (
+        spinner.state.status_text
+        == 'The painter should use his colour because he sees it or feels it.'
+    )
+    assert spinner.state.colors == ((0, 255, 255), (0, 128, 0))
 
 
-@patch.object(ThreadBackend, 'start')
-@patch.object(ThreadBackend, 'stop')
-@patch('seawhirl._lib.spinner.is_supported_terminal', return_value=True)
-def test_sync_context_manager(
-    _mock_is_supported: MagicMock,
-    mock_stop: MagicMock,
-    mock_start: MagicMock
-) -> None:
-    spinner = Spinner()
+def test_sync_context_manager(patched_thread_spinner) -> None:
+    spinner, mock_start, mock_stop = patched_thread_spinner
 
     with spinner:
         mock_start.assert_called_once()
@@ -87,37 +109,21 @@ def test_sync_context_manager(
     mock_stop.assert_called_once()
 
 
-@patch.object(ThreadBackend, 'start')
-@patch.object(ThreadBackend, 'stop')
-@patch('seawhirl._lib.spinner.is_supported_terminal', return_value=True)
-def test_sync_decorator(
-    _mock_is_supported: MagicMock,
-    mock_stop: MagicMock,
-    mock_start: MagicMock
-) -> None:
-    spinner = Spinner()
+def test_sync_decorator(patched_thread_spinner) -> None:
+    spinner, mock_start, mock_stop = patched_thread_spinner
 
     @spinner
     def mock_function() -> str:
         return 'success'
 
-    result = mock_function()
-
-    assert result == 'success'
+    assert mock_function() == 'success'
     mock_start.assert_called_once()
     mock_stop.assert_called_once()
 
 
 @pytest.mark.asyncio
-@patch.object(AsyncBackend, 'astart', new_callable=AsyncMock)
-@patch.object(AsyncBackend, 'astop', new_callable=AsyncMock)
-@patch('seawhirl._lib.spinner.is_supported_terminal', return_value=True)
-async def test_async_context_manager(
-    _mock_is_supported: MagicMock,
-    mock_astop: AsyncMock,
-    mock_astart: AsyncMock
-) -> None:
-    spinner = Spinner(backend=Backend.ASYNC)
+async def test_async_context_manager(patched_async_spinner) -> None:
+    spinner, mock_astart, mock_astop = patched_async_spinner
 
     async with spinner:
         mock_astart.assert_awaited_once()
@@ -126,23 +132,14 @@ async def test_async_context_manager(
 
 
 @pytest.mark.asyncio
-@patch.object(AsyncBackend, 'astart', new_callable=AsyncMock)
-@patch.object(AsyncBackend, 'astop', new_callable=AsyncMock)
-@patch('seawhirl._lib.spinner.is_supported_terminal', return_value=True)
-async def test_async_decorator(
-    _mock_is_supported: MagicMock,
-    mock_astop: AsyncMock,
-    mock_astart: AsyncMock
-) -> None:
-    spinner = Spinner(backend=Backend.ASYNC)
+async def test_async_decorator(patched_async_spinner) -> None:
+    spinner, mock_astart, mock_astop = patched_async_spinner
 
     @spinner
     async def mock_async_function() -> int:
         await asyncio.sleep(0.01)
         return 42
 
-    result = await mock_async_function()
-
-    assert result == 42
+    assert await mock_async_function() == 42
     mock_astart.assert_awaited_once()
     mock_astop.assert_awaited_once()

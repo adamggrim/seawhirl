@@ -1,5 +1,4 @@
 import os
-from unittest.mock import patch
 
 import pytest
 
@@ -16,17 +15,18 @@ from seawhirl._core.terminal import ANSI_MOVE_COLUMN
 @pytest.mark.parametrize(
     ('text', 'max_width', 'expected'),
     [
-    ('Loading', 20, 'Loading'),
-    (
-        'splash your great pines / on our rocks',
-        26,
-        'splash your great pines...',
-    ),
-    ('H.👨‍👩‍👧‍👦D.', 4, 'H...'),
-]
+        ('NON-ENERGIZED FUTURE', 20, 'NON-ENERGIZED FUTURE'),
+        (
+            'splash your great pines / on our rocks',
+            26,
+            'splash your great pines...',
+        ),
+        ('H.👨‍👩‍👧‍👦D.', 4, 'H...'),
+    ]
 )
 def test_truncate_text(text: str, max_width: int, expected: str) -> None:
     assert _truncate_text(text, max_width) == expected
+
 
 @pytest.fixture
 def engine_config() -> SpinnerConfig:
@@ -44,7 +44,7 @@ def engine_config() -> SpinnerConfig:
 
 
 def test_render_engine_initialization(engine_config: SpinnerConfig) -> None:
-    state = SpinnerState(status_text='Init')
+    state = SpinnerState(status_text='All MOMENTUM')
     engine = RenderEngine(engine_config, state)
 
     assert engine.num_frames == 4
@@ -53,13 +53,9 @@ def test_render_engine_initialization(engine_config: SpinnerConfig) -> None:
     assert engine.prev_rendered_frame == ''
 
 
-@patch('seawhirl._core.engine.shutil.get_terminal_size')
-def test_render_engine_tick_changes(
-    mock_terminal_size,
-    engine_config: SpinnerConfig
-) -> None:
-    mock_terminal_size.return_value = os.terminal_size((80, 24))
-    state = SpinnerState(status_text='Loading')
+@pytest.mark.usefixtures('mock_terminal_size')
+def test_render_engine_tick_changes(engine_config: SpinnerConfig) -> None:
+    state = SpinnerState(status_text='Whirl up sea')
     engine = RenderEngine(engine_config, state)
 
     engine.current_frame = 0.0
@@ -68,42 +64,46 @@ def test_render_engine_tick_changes(
     frame = engine.tick(engine.start_time)
     expected_ansi = ANSI_MOVE_COLUMN.format(col=engine.max_frame_width + 2)
 
-    assert frame == f'1{expected_ansi}Loading.'
+    assert frame == f'1{expected_ansi}Whirl up sea.'
     assert engine.prev_rendered_frame == frame
 
     assert engine.tick(engine.start_time) is None
 
     frame_advanced = engine.tick(engine.start_time + 0.15)
-    assert frame_advanced == f'2{expected_ansi}Loading..'
+    assert frame_advanced == f'2{expected_ansi}Whirl up sea..'
+
+    frame_final = engine.tick(engine.start_time + 0.25)
+    assert frame_final == f'3{expected_ansi}Whirl up sea...'
 
 
-@patch('seawhirl._core.engine.shutil.get_terminal_size')
 def test_render_engine_truncation_cache(
     mock_terminal_size,
     engine_config: SpinnerConfig
 ) -> None:
-    mock_terminal_size.return_value = os.terminal_size((8, 24))
-    state = SpinnerState(status_text='Hurling green')
+    mock_terminal_size.return_value = os.terminal_size((29, 24))
+    state = SpinnerState(
+        status_text='In decency one can only call it a VORTEX'
+    )
     engine = RenderEngine(engine_config, state)
 
     engine.current_frame = 0.0
     engine.current_status_frame = 0.0
 
     first_frame = engine.tick(engine.start_time)
-    assert '...' in first_frame
+    assert first_frame is not None
+    assert first_frame.endswith('In decency one can only...')
 
     cache_key = engine._text_cache[0]
     assert cache_key is not None
-    assert cache_key[0] == 'Hurling green.'
+    assert cache_key[0] == 'In decency one can only call it a VORTEX.'
 
+    engine.current_status_frame = -1.5
     second_frame = engine.tick(engine.start_time + 0.15)
-    assert '...' in second_frame
+    assert second_frame is not None
+    assert second_frame.endswith('In decency one can only...')
 
 
-@patch('seawhirl._core.engine.shutil.get_terminal_size')
-def test_render_engine_frame_too_wide(
-    mock_terminal_size,
-) -> None:
+def test_render_engine_frame_too_wide(mock_terminal_size) -> None:
     mock_terminal_size.return_value = os.terminal_size((1, 24))
     state = SpinnerState(status_text='')
     config = SpinnerConfig(
@@ -112,24 +112,16 @@ def test_render_engine_frame_too_wide(
         status_frames=[], status_fps=10.0, oscillation=False
     )
     engine = RenderEngine(config, state)
-    frame = engine.tick(engine.start_time)
-
-    assert frame is None
+    assert engine.tick(engine.start_time) is None
 
 
-@patch('seawhirl._core.engine.shutil.get_terminal_size')
-def test_render_engine_no_status_text(
-    mock_terminal_size,
-    engine_config: SpinnerConfig
-) -> None:
-    mock_terminal_size.return_value = os.terminal_size((80, 24))
+@pytest.mark.usefixtures('mock_terminal_size')
+def test_render_engine_no_status_text(engine_config: SpinnerConfig) -> None:
     state = SpinnerState(status_text='')
     engine = RenderEngine(engine_config, state)
 
     engine.current_frame = 0.0
-    frame = engine.tick(engine.start_time)
-
-    assert frame == '1'
+    assert engine.tick(engine.start_time) == '1'
 
 
 @pytest.mark.parametrize(
@@ -142,15 +134,17 @@ def test_render_engine_no_status_text(
         (4.0, 2.0),
     ],
 )
-def test_calculate_color_index_oscillation(current_val: float, expected: float) -> None:
+def test_calculate_color_index_oscillation(
+    current_val: float,
+    expected: float
+) -> None:
     easing = Sinusoidal().indexed()
     result = _calculate_color_index(current_val, 2.0, easing, oscillation=True)
     assert result == pytest.approx(expected)
 
 
-@patch('seawhirl._core.engine.shutil.get_terminal_size')
-def test_render_engine_indexed_color_mode(mock_terminal_size) -> None:
-    mock_terminal_size.return_value = os.terminal_size((80, 24))
+@pytest.mark.usefixtures('mock_terminal_size')
+def test_render_engine_indexed_color_mode() -> None:
     config = SpinnerConfig(
         accel_secs=2.0,
         initial_fps=10.0,

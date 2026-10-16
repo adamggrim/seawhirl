@@ -32,37 +32,29 @@ def test_config_instantiation() -> None:
     assert config.oscillation is True
 
 
-def test_config_immutability() -> None:
-    config = SpinnerConfig(
-        accel_secs=1.0,
-        initial_fps=2.0,
-        peak_animation_fps=10.0,
-        loop_delay=0.1,
-        frames=['1', '2'],
-        easing=Logarithmic(),
-        status_frames=[],
-        status_fps=0.0,
-        oscillation=False
-    )
-
+def test_config_immutability(dummy_config: SpinnerConfig) -> None:
     with pytest.raises(dataclasses.FrozenInstanceError):
-        config.accel_secs = 5.0
+        dummy_config.accel_secs = 5.0
 
 
 def test_state_instantiation() -> None:
-    state = SpinnerState(status_text='Loading')
-    assert state.status_text == 'Loading'
+    state = SpinnerState(status_text='THE IMAGE IS NOT an idea.')
+    assert state.status_text == 'THE IMAGE IS NOT an idea.'
 
 
 def test_state_mutability() -> None:
-    state = SpinnerState(status_text='Initial')
+    state = SpinnerState(status_text='THE IMAGE IS NOT an idea.')
 
-    state.status_text = 'Covered with green pools of fir.'
-    assert state.status_text == 'Covered with green pools of fir.'
+    state.status_text = 'It is a radiant node or cluster.'
+    assert state.status_text == 'It is a radiant node or cluster.'
 
 
 def test_state_slots_enforcement() -> None:
-    state = SpinnerState(status_text='Whirling')
+    state = SpinnerState(
+        status_text=(
+            'No artist can possibly get a vortex into every poem or picture.'
+        )
+    )
 
     with pytest.raises(AttributeError):
-        state.custom_attribute = 'Pointed'
+        state.custom_attribute = 'Vorticism'
