@@ -45,15 +45,16 @@ Use `python -m seawhirl --help` to see all available configuration flags.
 ```text
 seawhirl/
   ├── _cli/
-  │  └── cli.py: Command-line argument parsing
+  │  ├── cli.py: Command-line argument parsing
+  │  └── messages.py: Strings for displaying CLI messages
   ├── _core/
   │  ├── backends.py: Threading and asyncio backends for rendering
-  |  ├── colors.py: Color parsing utilities
+  │  ├── colors.py: Color parsing utilities
   │  ├── config.py: Spinner configuration objects
   │  ├── easing.py: Mathematical easing curves and physics
   │  ├── engine.py: The core spinner rendering engine
   │  ├── exceptions.py: Custom exceptions for spinners
-  |  ├── palette.py: Color palette definitions
+  │  ├── palette.py: Color palette definitions
   │  ├── presets.py: Preset spinner configurations
   │  ├── terminal.py: Terminal interaction and cursor manipulation
   │  └── utils.py: Universal utility functions
@@ -91,7 +92,8 @@ from seawhirl import Spinner
 
 with Spinner(
     accel_secs=6.0,
-    status_text='Whirl up sea...'
+    status_text='Whirl up sea...',
+    color='green'
 ):
     time.sleep(6)
 ```
