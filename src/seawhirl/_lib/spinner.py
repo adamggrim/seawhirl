@@ -60,7 +60,7 @@ class Spinner:
         peak_render_fps: float = SpinnerDefaults.MAX_RENDER_FPS,
         frames: list[str] | str | None = None,
         stream: TextIO | None = None,
-        backend: Backend = Backend.THREAD,
+        backend: Backend | None = None,
         easing: EasingStrategy | None = None,
         status_text: str = '',
         status_frames: list[str] | None = None,
@@ -126,26 +126,29 @@ class Spinner:
         )
 
         self._nesting_level = 0
-        self._worker: SpinnerBackend
-        if self.backend == Backend.THREAD:
-            self._worker = ThreadBackend(
-                self.stream, self.config, self.state, lock=self.lifecycle.lock
-            )
-        elif self.backend == Backend.ASYNC:
-            self._worker = AsyncBackend(
-                self.stream, self.config, self.state, lock=self.lifecycle.lock
-            )
+        self._thread_worker = ThreadBackend(
+            self.stream, self.config, self.state, lock=self.lifecycle.lock
+        )
+        self._async_worker = AsyncBackend(
+            self.stream, self.config, self.state, lock=self.lifecycle.lock
+        )
+        self._worker: SpinnerBackend = (
+            self._async_worker
+            if self.backend == Backend.ASYNC
+            else self._thread_worker
+        )
 
     def start(self) -> None:
         """Manually start the synchronous animation."""
         if self._nesting_level == 0:
+            self._worker = self._thread_worker
             self.lifecycle.__enter__()
             if not self._disabled:
                 self._worker.start()
         self._nesting_level += 1
 
     def stop(self) -> None:
-        """Manually stop the synchronous animation and restore terminal 
+        """Manually stop the synchronous animation and restore terminal
         state.
         """
         if self._nesting_level <= 0:
@@ -161,6 +164,11 @@ class Spinner:
     async def astart(self) -> None:
         """Manually start the asynchronous animation."""
         if self._nesting_level == 0:
+            self._worker = (
+                self._thread_worker
+                if self.backend == Backend.THREAD
+                else self._async_worker
+            )
             self.lifecycle.__enter__()
             if not self._disabled:
                 await self._worker.astart()
