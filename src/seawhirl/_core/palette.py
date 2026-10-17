@@ -1,5 +1,7 @@
 """Color palette definitions"""
 
+from collections.abc import Mapping
+from types import MappingProxyType
 from typing import TypeAlias
 
 __all__ = [
@@ -9,7 +11,7 @@ __all__ = [
 
 RGB: TypeAlias = tuple[int, int, int]
 
-COLOR_REGISTRY: dict[str, RGB] = {
+COLOR_REGISTRY: Mapping[str, RGB] = MappingProxyType({
     'aliceblue': (240, 248, 255),
     'antiquewhite': (250, 235, 215),
     'aqua': (0, 255, 255),
@@ -97,7 +99,6 @@ COLOR_REGISTRY: dict[str, RGB] = {
     'linen': (250, 240, 230),
     'magenta': (255, 0, 255),
     'maroon': (128, 0, 0),
-    'mauve': (224, 176, 255),
     'mediumaquamarine': (102, 205, 170),
     'mediumblue': (0, 0, 205),
     'mediumorchid': (186, 85, 211),
@@ -159,4 +160,4 @@ COLOR_REGISTRY: dict[str, RGB] = {
     'whitesmoke': (245, 245, 245),
     'yellow': (255, 255, 0),
     'yellowgreen': (154, 205, 50),
-}
+})
