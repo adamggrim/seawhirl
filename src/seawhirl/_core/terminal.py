@@ -23,7 +23,7 @@ FATAL_SIGNAL_BASE = 128
 STD_OUTPUT_HANDLE = -11
 
 class StreamProxy:
-    """Class for intercepting `print()` calls to prevent visual 
+    """Class for intercepting `print()` calls to prevent visual
     tearing.
     """
     def __init__(
@@ -63,7 +63,7 @@ class StreamProxy:
 
 
 class TerminalLifecycle:
-    """Context manager to isolate terminal mutations and signal 
+    """Context manager to isolate terminal mutations and signal
     hooks.
     """
     def __init__(
@@ -77,7 +77,8 @@ class TerminalLifecycle:
         self.disabled = disabled
         self.handle_signals = handle_signals
         self.lock = lock or threading.Lock()
-        self._original_stdout: TextIO | None = None
+        self._proxy_target = 'stderr' if stream is sys.stderr else 'stdout'
+        self._original_stream: TextIO | None = None
         self._original_signals: dict[signal.Signals, Any] = {}
 
     def __enter__(self) -> 'TerminalLifecycle':
@@ -85,7 +86,7 @@ class TerminalLifecycle:
             self._hide_cursor()
             if self.handle_signals:
                 self._register_signal_handlers()
-            self._apply_stdout_proxy()
+            self._apply_stream_proxy()
             atexit.register(self._cleanup)
         return self
 
@@ -107,12 +108,17 @@ class TerminalLifecycle:
         self.stream.write(ANSI_SHOW_CURSOR)
         self.stream.flush()
 
-    def _apply_stdout_proxy(self) -> None:
-        if isinstance(sys.stdout, StreamProxy):
-            self._original_stdout = None
+    def _apply_stream_proxy(self) -> None:
+        target_stream = getattr(sys, self._proxy_target)
+        if isinstance(target_stream, StreamProxy):
+            self._original_stream = None
         else:
-            self._original_stdout = sys.stdout
-            sys.stdout = StreamProxy(sys.stdout, lock=self.lock)
+            self._original_stream = target_stream
+            setattr(
+                sys,
+                self._proxy_target,
+                StreamProxy(target_stream, lock=self.lock)
+            )
 
     def _register_signal_handlers(self) -> None:
         default_handlers = (signal.SIG_DFL, signal.default_int_handler)
@@ -142,8 +148,9 @@ class TerminalLifecycle:
 
     def _cleanup(self) -> None:
         self._show_cursor()
-        if self._original_stdout is not None:
-            sys.stdout = self._original_stdout
+        if self._original_stream is not None:
+            setattr(sys, self._proxy_target, self._original_stream)
+            self._original_stream = None
         try:
             for sig, handler in self._original_signals.items():
                 signal.signal(sig, handler)
