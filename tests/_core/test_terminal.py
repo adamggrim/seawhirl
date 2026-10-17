@@ -145,6 +145,18 @@ class TestTerminalLifecycle:
 
         assert sys.stdout is original_stdout
 
+    def test_stderr_proxy_application(self) -> None:
+        original_stderr = sys.stderr
+
+        with TerminalLifecycle(
+            sys.stderr,
+            disabled=False,
+            handle_signals=False
+        ):
+            assert isinstance(sys.stderr, StreamProxy)
+
+        assert sys.stderr is original_stderr
+
     def test_stdout_proxy_shares_lifecycle_lock(self) -> None:
         shared_lock = threading.Lock()
 

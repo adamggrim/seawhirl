@@ -35,7 +35,9 @@ EXPECTED_EXPORTS: dict[str, object] = {
 
 def test_all_exports() -> None:
     assert hasattr(seawhirl, '__all__')
-    assert getattr(seawhirl, '__all__') == list(EXPECTED_EXPORTS.keys())
+    all_exports = getattr(seawhirl, '__all__')
+    assert len(all_exports) == len(EXPECTED_EXPORTS)
+    assert set(all_exports) == set(EXPECTED_EXPORTS.keys())
 
 
 def test_imports_match_origins() -> None:

@@ -68,7 +68,7 @@ def patched_async_spinner():
             AsyncBackend, 'astop', new_callable=AsyncMock
         ) as mock_astop,
     ):
-        yield Spinner(backend=Backend.ASYNC), mock_astart, mock_astop
+        yield Spinner(), mock_astart, mock_astop
 
 
 def test_manual_start_and_stop(patched_thread_spinner) -> None:
