@@ -19,6 +19,8 @@ __all__ = [
 ColorSpec: TypeAlias = str | RGB
 ColorInput: TypeAlias = ColorSpec | Sequence[ColorSpec]
 
+_CUSTOM_COLORS: dict[str, RGB] = {}
+
 
 def _is_rgb_tuple(value: object) -> bool:
     """Check if an object is a raw 3-integer tuple candidate for RGB."""
@@ -53,11 +55,14 @@ def _parse_rgb(color: ColorSpec) -> RGB:
             f"RGB tuple values must be integers in 0..255: '{color}'"
         )
 
-    clean = color.strip().lower()
-    if clean in COLOR_REGISTRY:
-        return COLOR_REGISTRY[clean]
+    normalized_color = color.strip().lower()
+    if (
+        rgb := _CUSTOM_COLORS.get(normalized_color)
+        or COLOR_REGISTRY.get(normalized_color)
+    ):
+        return rgb
 
-    hex_str = clean.lstrip('#')
+    hex_str = normalized_color.lstrip('#')
     if len(hex_str) == 6:
         try:
             return (
@@ -150,6 +155,14 @@ def interpolate_indexed_ansi_color(
         clamped - base_idx
     )
 
+
 def register_color(name: str, color: ColorSpec) -> None:
-    """Register a custom named color into the global registry."""
-    COLOR_REGISTRY[name.strip().lower()] = _parse_rgb(color)
+    """Register a custom named color without mutating built-in defaults."""
+    normalized_name = name.strip().lower()
+    if (
+        not normalized_name
+        or ',' in normalized_name
+        or normalized_name.startswith('#')
+    ):
+        raise InvalidColorError(f"Invalid color name: '{name}'")
+    _CUSTOM_COLORS[normalized_name] = _parse_rgb(color)
