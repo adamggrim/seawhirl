@@ -83,13 +83,16 @@ class Spinner:
         else:
             if not frames or not any(frames):
                 raise ValueError(
-                    'frames must contain at least one non-empty string.'
+                    "'frames' must contain at least one non-empty string."
                 )
             self.frames = frames
 
         self._disabled = not is_supported_terminal(self.stream)
         if not self._disabled:
             enable_windows_vt_processing()
+
+        if peak_render_fps <= 0:
+            raise ValueError("'peak_render_fps' must be greater than 0.")
 
         self.backend = backend
         self.easing = easing or Logarithmic()

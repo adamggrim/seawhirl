@@ -154,8 +154,8 @@ class AsyncBackend(SpinnerBackend):
     def start(self) -> None:
         """Block illegal synchronous invocations."""
         raise BackendStartupError(
-            "`AsyncBackend` cannot start synchronously. Please use 'async "
-            "with' or decorate an async function."
+            "Asynchronous backend cannot start synchronously. Use 'async "
+            "with' or decorate an asynchronous function."
         )
 
     def stop(self) -> None:
@@ -176,7 +176,7 @@ class AsyncBackend(SpinnerBackend):
             await asyncio.to_thread(self._write_frame, frame)
 
     async def _async_render_loop(self) -> None:
-        """Internal asynchronous polling loop mapping engine state to 
+        """Internal asynchronous polling loop mapping engine state to
         I/O.
         """
         engine = RenderEngine(self.config, self.state)
